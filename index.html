@@ -298,6 +298,9 @@
 
     const fateLine = state.currentFateTokens != null ? `<div class="item-line">Fate Tokens: <span class="in">${state.currentFateTokens}</span></div>` : "";
     const xpLine = state.xpEarned != null ? `<div class="item-line">XP earned: <span class="in">${state.xpEarned}</span></div>` : "";
+    const notesHtml = state.finishingNotes
+      ? `<p>${escapeHtml(state.finishingNotes).replace(/\n\n+/g, "</p><p>").replace(/\n/g, "<br>")}</p>`
+      : "";
 
     document.getElementById("charView").innerHTML = `
       <div class="char-header">
@@ -306,6 +309,8 @@
           <div class="char-concept">${escapeHtml(state.concept || "")}${natureLabel ? ` &middot; ${escapeHtml(natureLabel)}` : ""}</div>
         </div>
       </div>
+
+      ${notesHtml ? `<div class="char-section" style="margin-top:0"><div class="char-section-title">Notes</div><div class="item-line" style="line-height:1.5">${notesHtml}</div></div>` : ""}
 
       <div class="char-section">
         <div class="char-section-title">Figured Characteristics</div>
