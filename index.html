@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>20 Below Roster</title>
+<link rel="icon" type="image/svg+xml" href="https://feralucce.github.io/20_Below_Roster/icon.svg" />
+<style>
+  :root {
+    --bg: #0a1720;
+    --panel: #12232e;
+    --panel-2: #0e1c26;
+    --panel-border: #24404f;
+    --text: #eaf5fb;
+    --text-dim: #8fadbe;
+    --text-faint: #5c7686;
+    --accent: #3d84c4;
+    --accent-dim: #1c3548;
+    --ok: #4caf7d;
+    --danger: #d1584f;
+    --gold: #d4af6a;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 18px;
+  }
+  body { padding: 0.6rem 0.7rem 0.8rem; }
+  h1 {
+    font-size: 0.95rem;
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    letter-spacing: 0.02em;
+  }
+  label {
+    display: block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+    margin-bottom: 0.2rem;
+  }
+
+  .file-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: var(--panel-2);
+    border: 1px dashed var(--panel-border);
+    color: var(--text-dim);
+    border-radius: 5px;
+    padding: 0.6rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+    margin-bottom: 0.6rem;
+  }
+  .file-btn:hover { border-color: var(--accent); color: var(--text); }
+  #addFile { display: none; }
+
+  .small-link {
+    display: block;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.7rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    margin: 0 0 0.6rem;
+  }
+
+  .roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.6rem;
+  }
+  .roster-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--panel-border);
+    border-radius: 5px;
+    padding: 0.45rem 0.6rem;
+    cursor: pointer;
+  }
+  .roster-item:hover { border-color: var(--accent); }
+  .roster-item.active { background: var(--accent-dim); border-left-color: var(--gold); border-color: var(--accent); }
+  .roster-item .ri-name { font-weight: 700; font-size: 0.85rem; }
+  .roster-item .ri-concept { font-size: 0.68rem; color: var(--text-faint); font-style: italic; }
+  .roster-item .ri-remove {
+    background: none;
+    border: 1px solid var(--panel-border);
+    color: var(--text-faint);
+    border-radius: 4px;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+  }
+  .ri-broken { color: var(--danger); font-size: 0.68rem; }
+  .list-empty { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0.3rem 0; }
+
+  .detail-wrap {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 0.6rem 0.65rem;
+  }
+  .detail-back {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.7rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .char-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+  .char-name { font-family: Georgia, serif; font-size: 1.15rem; font-weight: 700; color: var(--gold); }
+  .char-concept { font-size: 0.75rem; color: var(--text-dim); font-style: italic; margin-top: 0.1rem; }
+  .char-clear {
+    background: none;
+    border: 1px solid var(--panel-border);
+    color: var(--text-faint);
+    border-radius: 4px;
+    font-size: 0.62rem;
+    padding: 0.15rem 0.4rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .char-section { margin-top: 0.65rem; }
+  .char-section-title {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 0.15rem;
+    margin-bottom: 0.35rem;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
+  .stat-chip {
+    background: var(--panel-2);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 0.3rem 0.35rem;
+    text-align: center;
+  }
+  .stat-chip .v { font-size: 1rem; font-weight: 700; color: var(--text); }
+  .stat-chip .k { font-size: 0.58rem; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.03em; }
+  .attr-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.2rem 0;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--panel-2);
+  }
+  .attr-row .an { color: var(--text-dim); }
+  .attr-row .av { color: var(--text); font-weight: 700; }
+  .attr-row .subs { color: var(--text-faint); font-size: 0.68rem; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .tag {
+    background: var(--panel-2);
+    border: 1px solid var(--panel-border);
+    border-radius: 3px;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+  .tag .tv { color: var(--gold); font-weight: 600; }
+  .item-line { font-size: 0.75rem; padding: 0.15rem 0; color: var(--text-dim); }
+  .item-line .in { color: var(--text); }
+  .item-sub { font-size: 0.65rem; color: var(--text-faint); padding-left: 0.6rem; }
+  .empty-note { font-size: 0.72rem; color: var(--text-faint); margin-top: 0.3rem; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<h1><img src="https://feralucce.github.io/20_Below_Roster/icon.svg" alt="" width="20" height="20" /> 20 Below Roster</h1>
+
+<label class="file-btn" for="addFile">Add character JSON(s)&hellip;</label>
+<input type="file" id="addFile" accept="application/json,.json" multiple />
+<div class="empty-note" style="margin-top:-0.3rem;margin-bottom:0.6rem">Export characters from the <a href="https://feralucce.github.io/20_Below/app/" target="_blank" style="color:var(--accent)">20 Below character creator</a> (Sheet step &rarr; Save/Export) - players and NPCs both work. Read-only, no editing here.</div>
+
+<div id="rosterList" class="roster-list"><div class="list-empty">No characters loaded yet.</div></div>
+
+<div id="detail" style="display:none" class="detail-wrap">
+  <button class="detail-back" id="backBtn">&larr; Back to roster</button>
+  <div id="charView"></div>
+</div>
+
+<script type="module">
+  const STORAGE_KEY = "twentybelow-roster.characters";
+  let roster = []; // [{ id, text, state|null, error|null }]
+  let activeId = null;
+
+  const TIER_NAMES = ["Untrained", "Novice", "Trained", "Adept", "Expert", "Master"];
+  const ATTR_SUBS = {
+    Earth: ["Soak", "Potence"],
+    Air: ["Initiative", "Psyche"],
+    Fire: ["Ferocity", "Presence"],
+    Water: ["Stamina", "Health"],
+    Moira: ["Atropos", "Klotho"],
+  };
+
+  function computeFiguredCharacteristics(state) {
+    const s = state.subStats || {};
+    const ki = (((s.Soak || 0) + (s.Initiative || 0) + (s.Ferocity || 0) + (s.Stamina || 0) + (s.Atropos || 0)) / 5) * 2;
+    return {
+      "Health Levels": 5 + (s.Health || 0),
+      Poise: 5 + (s.Presence || 0),
+      Sanity: 5 + (s.Psyche || 0),
+      Defense: 10 - (s.Atropos || 0),
+      "Movement Rate": 5 + ((state.attributes && state.attributes.Air) || 0),
+      "Carrying Capacity": Math.pow(s.Potence || 0, 2) * 10,
+      Ki: Math.ceil(ki),
+    };
+  }
+
+  function effectiveResourceLevel(state, name) {
+    if (state.resourceZeroed && state.resourceZeroed[name]) return 0;
+    const level = (state.resources && state.resources[name]) ?? 0;
+    const penalty = (state.resourcePenalties && state.resourcePenalties[name]) ?? 0;
+    return Math.max(Math.min(level, 1), level - penalty);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderCharacter(state) {
+    const figured = computeFiguredCharacteristics(state);
+    const natureLabel = state.nature && state.nature.custom
+      ? state.nature.custom.label
+      : (state.nature && state.nature.picked) || null;
+
+    const attrRows = Object.entries(state.attributes || {}).map(([name, val]) => {
+      const subs = (ATTR_SUBS[name] || []).map((s) => `${s} ${(state.subStats && state.subStats[s]) ?? 0}`).join(" · ");
+      return `<div class="attr-row"><span class="an">${escapeHtml(name)}</span><span class="subs">${escapeHtml(subs)}</span><span class="av">${val}</span></div>`;
+    }).join("");
+
+    const statChips = Object.entries(figured).map(([k, v]) => {
+      let cur = "";
+      if (k === "Health Levels" && state.currentHealth != null) cur = `${state.currentHealth}/`;
+      if (k === "Poise" && state.currentPoise != null) cur = `${state.currentPoise}/`;
+      if (k === "Sanity" && state.currentSanity != null) cur = `${state.currentSanity}/`;
+      if (k === "Ki" && state.currentKi != null) cur = `${state.currentKi}/`;
+      return `<div class="stat-chip"><div class="v">${cur}${v}</div><div class="k">${escapeHtml(k)}</div></div>`;
+    }).join("");
+
+    const trainedSkills = Object.entries(state.skills || {}).filter(([, tier]) => tier > 0);
+    const skillsHtml = trainedSkills.length
+      ? `<div class="tag-list">${trainedSkills.map(([name, tier]) => `<span class="tag">${escapeHtml(name)} <span class="tv">${TIER_NAMES[tier] || tier}</span></span>`).join("")}</div>`
+      : `<div class="item-line">None trained.</div>`;
+
+    const boons = state.boons || [];
+    const boonsHtml = boons.length
+      ? boons.map((b) => `<div class="item-line"><span class="in">${escapeHtml(b.name)}</span>${b.tier ? ` (Tier ${b.tier})` : ""}</div>`).join("")
+      : `<div class="item-line">None.</div>`;
+
+    const resourceEntries = Object.keys(state.resources || {}).map((name) => [name, effectiveResourceLevel(state, name)]).filter(([, lvl]) => lvl > 0);
+    const resourcesHtml = resourceEntries.length
+      ? `<div class="tag-list">${resourceEntries.map(([name, lvl]) => `<span class="tag">${escapeHtml(name)} <span class="tv">${lvl}</span></span>`).join("")}</div>`
+      : `<div class="item-line">None.</div>`;
+
+    const gifts = state.gifts || [];
+    const giftsHtml = gifts.length
+      ? gifts.map((g) => {
+          const extras = [];
+          if (g.adders && g.adders.length) extras.push(`Adders: ${g.adders.join(", ")}`);
+          if (g.limiters && g.limiters.length) extras.push(`Limiters: ${g.limiters.join(", ")}`);
+          return `<div class="item-line"><span class="in">${escapeHtml(g.name)}</span> — Level ${g.level}</div>` +
+            (extras.length ? `<div class="item-sub">${escapeHtml(extras.join(" · "))}</div>` : "");
+        }).join("")
+      : `<div class="item-line">None.</div>`;
+
+    const flaws = state.flaws || [];
+    const flawsHtml = flaws.length
+      ? `<div class="tag-list">${flaws.map((f) => `<span class="tag">${escapeHtml(f.name)}${f.level ? ` <span class="tv">${f.level}</span>` : ""}</span>`).join("")}</div>`
+      : `<div class="item-line">None.</div>`;
+
+    const scars = state.scars || [];
+    const scarsHtml = scars.length
+      ? scars.map((s) => `<div class="item-line"><span class="in">${escapeHtml(s.title)}</span> (${s.physical ? "Physical" : "Mental"})</div>`).join("")
+      : "";
+
+    const fateLine = state.currentFateTokens != null ? `<div class="item-line">Fate Tokens: <span class="in">${state.currentFateTokens}</span></div>` : "";
+    const xpLine = state.xpEarned != null ? `<div class="item-line">XP earned: <span class="in">${state.xpEarned}</span></div>` : "";
+
+    document.getElementById("charView").innerHTML = `
+      <div class="char-header">
+        <div>
+          <div class="char-name">${escapeHtml(state.name || "Unnamed")}</div>
+          <div class="char-concept">${escapeHtml(state.concept || "")}${natureLabel ? ` &middot; ${escapeHtml(natureLabel)}` : ""}</div>
+        </div>
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Figured Characteristics</div>
+        <div class="stat-grid">${statChips}</div>
+        ${fateLine}${xpLine}
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Attributes</div>
+        ${attrRows}
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Skills</div>
+        ${skillsHtml}
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Boons</div>
+        ${boonsHtml}
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Resources</div>
+        ${resourcesHtml}
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Gifts</div>
+        ${giftsHtml}
+      </div>
+
+      <div class="char-section">
+        <div class="char-section-title">Flaws</div>
+        ${flawsHtml}
+      </div>
+
+      ${scars.length ? `<div class="char-section"><div class="char-section-title">Scars</div>${scarsHtml}</div>` : ""}
+    `;
+  }
+
+  // ---- Roster management ----
+
+  function saveRoster() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(roster.map((r) => ({ id: r.id, text: r.text }))));
+    } catch (e) {
+      // storage unavailable - roster still works for this session
+    }
+  }
+
+  function parseEntry(id, text) {
+    try {
+      const state = JSON.parse(text);
+      if (!state || typeof state !== "object" || !state.attributes || !state.subStats) {
+        return { id, text, state: null, error: "Not a 20 Below character export" };
+      }
+      return { id, text, state, error: null };
+    } catch (e) {
+      return { id, text, state: null, error: "Invalid JSON" };
+    }
+  }
+
+  function addCharacterText(text) {
+    const id = `c${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
+    const entry = parseEntry(id, text);
+    roster.push(entry);
+    saveRoster();
+    renderList();
+    if (entry.state) selectCharacter(id);
+  }
+
+  function removeCharacter(id) {
+    roster = roster.filter((r) => r.id !== id);
+    saveRoster();
+    if (activeId === id) {
+      activeId = null;
+      document.getElementById("detail").style.display = "none";
+    }
+    renderList();
+  }
+
+  function selectCharacter(id) {
+    const entry = roster.find((r) => r.id === id);
+    if (!entry || !entry.state) return;
+    activeId = id;
+    renderCharacter(entry.state);
+    document.getElementById("detail").style.display = "";
+    renderList();
+  }
+
+  function renderList() {
+    const listEl = document.getElementById("rosterList");
+    if (roster.length === 0) {
+      listEl.innerHTML = '<div class="list-empty">No characters loaded yet.</div>';
+      return;
+    }
+    listEl.innerHTML = "";
+    roster.forEach((entry) => {
+      const div = document.createElement("div");
+      div.className = `roster-item${entry.id === activeId ? " active" : ""}`;
+      if (entry.state) {
+        const natureLabel = entry.state.nature && entry.state.nature.custom
+          ? entry.state.nature.custom.label
+          : (entry.state.nature && entry.state.nature.picked) || "";
+        div.innerHTML = `
+          <div>
+            <div class="ri-name">${escapeHtml(entry.state.name || "Unnamed")}</div>
+            <div class="ri-concept">${escapeHtml(entry.state.concept || natureLabel || "")}</div>
+          </div>
+          <button class="ri-remove" data-id="${entry.id}">Remove</button>
+        `;
+        div.addEventListener("click", (e) => {
+          if (e.target.closest(".ri-remove")) return;
+          selectCharacter(entry.id);
+        });
+      } else {
+        div.innerHTML = `
+          <div>
+            <div class="ri-name ri-broken">Couldn't load this file</div>
+            <div class="ri-concept">${escapeHtml(entry.error || "Unknown error")}</div>
+          </div>
+          <button class="ri-remove" data-id="${entry.id}">Remove</button>
+        `;
+      }
+      div.querySelector(".ri-remove").addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeCharacter(entry.id);
+      });
+      listEl.appendChild(div);
+    });
+  }
+
+  document.getElementById("addFile").addEventListener("change", (e) => {
+    const files = [...e.target.files];
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => addCharacterText(reader.result);
+      reader.readAsText(file);
+    });
+    e.target.value = "";
+  });
+
+  document.getElementById("backBtn").addEventListener("click", () => {
+    activeId = null;
+    document.getElementById("detail").style.display = "none";
+    renderList();
+  });
+
+  // Load persisted roster
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      roster = parsed.map((r) => parseEntry(r.id, r.text));
+    }
+  } catch (e) {}
+  renderList();
+</script>
+</body>
+</html>

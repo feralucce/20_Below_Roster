@@ -1,0 +1,16 @@
+{
+  "name": "20 Below Roster",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "author": "Feralucce",
+  "homepage_url": "https://github.com/feralucce/20_Below_Roster",
+  "icon": "https://feralucce.github.io/20_Below_Roster/icon.svg",
+  "description": "A GM-side roster of 20 Below characters - load player and NPC JSON exports, click one to view read-only.",
+  "action": {
+    "title": "20 Below Roster",
+    "icon": "https://feralucce.github.io/20_Below_Roster/icon.svg",
+    "popover": "https://feralucce.github.io/20_Below_Roster/index.html",
+    "height": 780,
+    "width": 460
+  }
+}
