@@ -1,6 +1,6 @@
 # 20 Below Roster
 
-An [Owlbear Rodeo](https://www.owlbear.rodeo/) extension for GMs running [20 Below](https://feralucce.github.io/20_Below/). Load player and NPC character JSONs, see them as a list, click one to view it read-only. No editing, no dice, no functionality beyond looking a character up mid-session.
+An [Owlbear Rodeo](https://www.owlbear.rodeo/) extension for GMs running [20 Below](https://20belowrpg.com/). Load player and NPC character JSONs, see them as a list, click one to view it read-only. No editing, no dice, no functionality beyond looking a character up mid-session.
 
 ## Installing
 
