@@ -5,7 +5,7 @@
   "author": "Feralucce",
   "homepage_url": "https://github.com/feralucce/20_Below_Roster",
   "icon": "https://feralucce.github.io/20_Below_Roster/icon.svg",
-  "description": "A GM-side roster and combat tracker for 20 Below - load character JSONs, run Initiative and Action Brackets, track Health/Poise/Sanity/Ki, and link tokens on the scene.",
+  "description": "A GM-side roster and combat tracker for 20 Below: Initiative, Action Brackets, turn order, damage tracks, and scene tokens.",
   "action": {
     "title": "20 Below Roster",
     "icon": "https://feralucce.github.io/20_Below_Roster/icon.svg",
