@@ -964,6 +964,26 @@
     return `<div class="ri-combat">${initCell}${brackets}${tracks}${token}</div>`;
   }
 
+  // The list stays in the order characters were added right through setup
+  // and the declare phase - rolling Initiative and picking brackets doesn't
+  // move anything, so rows don't shift around while you're still typing
+  // numbers in. Resolve round is what reorders: from then until the round
+  // ends, the list follows the actual turn order (Fast band, then Normal,
+  // then Slow, Initiative breaking ties), so the highlighted row walks
+  // straight down it.
+  //
+  // Anything not in the turn order - a file that failed to load, or someone
+  // added mid-round - sits at the bottom rather than being dropped.
+  function displayOrder() {
+    if (!combat.started || combat.turnIndex < 0 || !combat.resolutionOrder) return roster;
+    const rank = new Map(combat.resolutionOrder.map((id, i) => [id, i]));
+    return roster.slice().sort((a, b) => {
+      const ra = rank.has(a.id) ? rank.get(a.id) : Infinity;
+      const rb = rank.has(b.id) ? rank.get(b.id) : Infinity;
+      return ra - rb;
+    });
+  }
+
   function renderList() {
     const listEl = document.getElementById("rosterList");
     if (roster.length === 0) {
@@ -972,7 +992,7 @@
       return;
     }
     listEl.innerHTML = "";
-    roster.forEach((entry) => {
+    displayOrder().forEach((entry) => {
       const div = document.createElement("div");
       const onTurn = combat.started && currentTurnId() === entry.id;
       div.className = `roster-item${entry.id === activeId ? " active" : ""}${onTurn ? " on-turn" : ""}`;
