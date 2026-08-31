@@ -184,6 +184,127 @@
   .item-line .in { color: var(--text); }
   .item-sub { font-size: 0.65rem; color: var(--text-faint); padding-left: 0.6rem; }
   .empty-note { font-size: 0.72rem; color: var(--text-faint); margin-top: 0.3rem; line-height: 1.4; }
+
+  /* ---- Combat tracker ---- */
+
+  .combat-bar {
+    background: var(--panel-2);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+  .combat-bar.active { border-color: var(--gold); }
+  .cb-top { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  .cb-phase {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+  }
+  .cb-round { font-size: 0.85rem; font-weight: 700; color: var(--gold); }
+  .cb-turn { font-size: 0.78rem; color: var(--text); margin-top: 0.25rem; }
+  .cb-turn .who { font-weight: 700; color: var(--gold); }
+  .cb-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; }
+
+  .btn {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    color: var(--text-dim);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    padding: 0.28rem 0.55rem;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: var(--accent-dim); border-color: var(--accent); color: var(--text); font-weight: 600; }
+  .btn.danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+  .btn.on { background: var(--accent-dim); border-color: var(--gold); color: var(--text); font-weight: 700; }
+
+  .roster-item.on-turn { border-left-color: var(--gold); background: var(--accent-dim); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .roster-item { flex-wrap: wrap; }
+  .ri-main { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.5rem; }
+  .ri-meta { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
+  .role-chip {
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 3px;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--panel-border);
+    color: var(--text-faint);
+    cursor: pointer;
+    background: none;
+  }
+  .role-PC { color: var(--ok); border-color: var(--ok); }
+  .role-Ally { color: var(--accent); border-color: var(--accent); }
+  .role-NPC { color: var(--danger); border-color: var(--danger); }
+
+  .ri-combat {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--panel-2);
+  }
+  .init-box {
+    width: 3.1rem;
+    background: var(--panel-2);
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 0.72rem;
+    padding: 0.22rem 0.3rem;
+    text-align: center;
+  }
+  .mini-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); }
+
+  .track {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    background: var(--panel-2);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 0.1rem 0.2rem;
+  }
+  .track .tk { font-size: 0.55rem; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.04em; }
+  .track .tv { font-size: 0.75rem; font-weight: 700; min-width: 2.2rem; text-align: center; }
+  .track button {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0 0.15rem;
+  }
+  .track button:hover { color: var(--text); }
+  .track.hurt .tv { color: var(--gold); }
+  .track.down .tv { color: var(--danger); }
+  .status-chip {
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 3px;
+    padding: 0.08rem 0.28rem;
+  }
+
+  .token-btn { font-size: 0.62rem; padding: 0.2rem 0.4rem; }
+  .token-btn.linked { color: var(--ok); border-color: var(--ok); }
+  .obr-note {
+    font-size: 0.66rem;
+    color: var(--text-faint);
+    font-style: italic;
+    margin-bottom: 0.5rem;
+    line-height: 1.35;
+  }
 </style>
 </head>
 <body>
@@ -194,6 +315,10 @@
 <input type="file" id="addFile" accept="application/json,.json" multiple />
 <div class="empty-note" style="margin-top:-0.3rem;margin-bottom:0.6rem">Export characters from the <a href="https://20belowrpg.com/app/" target="_blank" style="color:var(--accent)">20 Below character creator</a> (Sheet step &rarr; Save/Export) - players and NPCs both work. Read-only, no editing here.</div>
 
+<div id="obrNote" class="obr-note" style="display:none"></div>
+
+<div id="combatBar" class="combat-bar"></div>
+
 <div id="rosterList" class="roster-list"><div class="list-empty">No characters loaded yet.</div></div>
 
 <div id="detail" style="display:none" class="detail-wrap">
@@ -203,8 +328,76 @@
 
 <script type="module">
   const STORAGE_KEY = "twentybelow-roster.characters";
+  const COMBAT_KEY = "twentybelow-roster.combat";
   let roster = []; // [{ id, text, state|null, error|null }]
   let activeId = null;
+
+  // ---- Shared rules logic ----
+  //
+  // Health/Poise/Sanity thresholds are rules, not UI, and they have already
+  // moved once (Poise's below-0 exception, 2026-08-20). Pull them live from
+  // the character creator rather than keeping a third hand-copied set that
+  // can quietly disagree with the app and the desktop tracker. Dynamic
+  // import so a failed fetch degrades instead of blanking the panel - the
+  // fallbacks below must stay identical to app/state.js.
+  let healthStatus = (current, healthSubStat) => {
+    if (current > 0) return null;
+    return current < 0 && current <= -healthSubStat ? "Dead" : "Unconscious";
+  };
+  let poiseStatus = (current) => (current < 0 ? "Humiliated" : current === 0 ? "Flustered" : null);
+  let sanityStatus = (current) => (current < 0 ? "Shattered" : current === 0 ? "Overwhelmed" : null);
+  let rollD10 = () => 1 + Math.floor(Math.random() * 10);
+
+  (async () => {
+    try {
+      const s = await import("https://20belowrpg.com/app/state.js");
+      const r = await import("https://20belowrpg.com/app/roller/core.js");
+      if (s.healthStatus) healthStatus = s.healthStatus;
+      if (s.poiseStatus) poiseStatus = s.poiseStatus;
+      if (s.sanityStatus) sanityStatus = s.sanityStatus;
+      if (r.rollD10) rollD10 = r.rollD10;
+    } catch (e) {
+      // Offline or the site moved - the local fallbacks above stand in.
+    }
+  })();
+
+  // ---- Owlbear bridge ----
+  //
+  // Loaded dynamically and tolerated when absent, so the panel still works
+  // opened directly in a browser (which is also how it gets tested) - only
+  // the token-linking features go quiet.
+  let OBR = null;
+  let obrReady = false;
+
+  async function initOBR() {
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm");
+      OBR = mod.default;
+      if (!OBR || !OBR.isAvailable) throw new Error("not in Owlbear");
+      await new Promise((resolve) => OBR.onReady(resolve));
+      obrReady = true;
+      // A token deleted from the scene should not leave a dead link behind.
+      OBR.scene.items.onChange((items) => {
+        const live = new Set(items.map((i) => i.id));
+        let changed = false;
+        Object.values(combat.entries).forEach((e) => {
+          if (e.tokenId && !live.has(e.tokenId)) {
+            e.tokenId = null;
+            e.tokenName = null;
+            changed = true;
+          }
+        });
+        if (changed) { saveCombat(); renderList(); }
+      });
+    } catch (e) {
+      obrReady = false;
+      const note = document.getElementById("obrNote");
+      note.style.display = "";
+      note.textContent =
+        "Not running inside Owlbear Rodeo - combat tracking works, but linking tokens to the scene is unavailable.";
+    }
+    renderList();
+  }
 
   const TIER_NAMES = ["Untrained", "Novice", "Trained", "Adept", "Expert", "Master"];
   const ATTR_SUBS = {
@@ -352,6 +545,246 @@
     `;
   }
 
+  // ---- Combat state ----
+  //
+  // Mirrors gm-app/gm-state.js (the desktop Combat Tracker) so the two can't
+  // drift on how a round actually runs. Kept in its own storage key and
+  // keyed by roster entry id, so an existing saved roster loads untouched
+  // and combat state can be cleared without losing the characters.
+  let combat = createCombat();
+
+  function createCombat() {
+    return {
+      started: false,
+      round: 0,
+      turnIndex: -1, // -1 = declare phase; >= 0 = index into resolutionOrder
+      resolutionOrder: null,
+      entries: {}, // rosterId -> per-character combat state
+    };
+  }
+
+  // Combat state is created lazily so characters added mid-fight just work.
+  function combatEntry(r) {
+    let e = combat.entries[r.id];
+    if (!e) {
+      const f = computeFiguredCharacteristics(r.state);
+      e = combat.entries[r.id] = {
+        role: "NPC",
+        initiative: null,
+        bracket: null,
+        kiSpentThisRound: 0,
+        currentHealth: r.state.currentHealth ?? f["Health Levels"],
+        currentPoise: r.state.currentPoise ?? f.Poise,
+        currentSanity: r.state.currentSanity ?? f.Sanity,
+        currentKi: r.state.currentKi ?? f.Ki,
+        tokenId: null,
+        tokenName: null,
+      };
+    }
+    return e;
+  }
+
+  function saveCombat() {
+    try {
+      localStorage.setItem(COMBAT_KEY, JSON.stringify(combat));
+    } catch (e) {}
+  }
+
+  function combatants() {
+    return roster.filter((r) => r.state);
+  }
+
+  const ROLES = ["PC", "Ally", "NPC"];
+  const BRACKETS = ["Slow", "Normal", "Fast"];
+
+  function cycleRole(r) {
+    const e = combatEntry(r);
+    e.role = ROLES[(ROLES.indexOf(e.role) + 1) % ROLES.length];
+    saveCombat();
+    renderList();
+  }
+
+  // NPCs and Allies roll 1d10 + their Initiative sub-stat. PCs report what
+  // they rolled at the table, so those are typed in instead.
+  function rollInitiative(r) {
+    const e = combatEntry(r);
+    e.initiative = rollD10() + ((r.state.subStats && r.state.subStats.Initiative) || 0);
+    saveCombat();
+    renderAll();
+  }
+
+  function rollAllNonPC() {
+    combatants().forEach((r) => {
+      const e = combatEntry(r);
+      if (e.role === "PC") return;
+      e.initiative = rollD10() + ((r.state.subStats && r.state.subStats.Initiative) || 0);
+    });
+    saveCombat();
+    renderAll();
+  }
+
+  function allInitiativeSet() {
+    const list = combatants();
+    return list.length > 0 && list.every((r) => combatEntry(r).initiative != null);
+  }
+
+  function allBracketsDeclared() {
+    const list = combatants();
+    return list.length > 0 && list.every((r) => combatEntry(r).bracket != null);
+  }
+
+  // Initiative is rolled once at the start of combat and never re-rolled,
+  // per rules.md#combat-order.
+  function beginCombat() {
+    combat.started = true;
+    combat.round = 1;
+    combat.turnIndex = -1;
+    combat.resolutionOrder = null;
+    combatants().forEach((r) => {
+      const e = combatEntry(r);
+      e.bracket = null;
+      e.kiSpentThisRound = 0;
+    });
+    saveCombat();
+    renderAll();
+  }
+
+  // 1 Ki per step, Slow -> Normal -> Fast. No-ops past Fast or with no Ki
+  // left rather than letting either run off the end.
+  function bumpBracket(r) {
+    const e = combatEntry(r);
+    if (!e.bracket || e.currentKi <= 0) return;
+    const i = BRACKETS.indexOf(e.bracket);
+    if (i >= BRACKETS.length - 1) return;
+    e.bracket = BRACKETS[i + 1];
+    e.currentKi -= 1;
+    e.kiSpentThisRound += 1;
+    saveCombat();
+    renderAll();
+  }
+
+  // All Fast act, then all Normal, then all Slow; Initiative breaks ties
+  // within a bracket.
+  function resolveRound() {
+    const rank = { Fast: 0, Normal: 1, Slow: 2 };
+    combat.resolutionOrder = combatants()
+      .slice()
+      .sort((a, b) => {
+        const ea = combatEntry(a), eb = combatEntry(b);
+        return rank[ea.bracket] - rank[eb.bracket] || eb.initiative - ea.initiative;
+      })
+      .map((r) => r.id);
+    combat.turnIndex = 0;
+    saveCombat();
+    renderAll();
+    highlightCurrentToken();
+  }
+
+  function currentTurnId() {
+    const { resolutionOrder, turnIndex } = combat;
+    if (!resolutionOrder || turnIndex < 0 || turnIndex >= resolutionOrder.length) return null;
+    return resolutionOrder[turnIndex];
+  }
+
+  // Once the order is exhausted, brackets are cleared and the round starts
+  // over at the declare phase - they are re-declared every round.
+  function advanceTurn() {
+    if (!combat.resolutionOrder) return;
+    if (combat.turnIndex + 1 < combat.resolutionOrder.length) {
+      combat.turnIndex += 1;
+    } else {
+      combat.round += 1;
+      combat.turnIndex = -1;
+      combat.resolutionOrder = null;
+      combatants().forEach((r) => {
+        const e = combatEntry(r);
+        e.bracket = null;
+        e.kiSpentThisRound = 0;
+      });
+    }
+    saveCombat();
+    renderAll();
+    highlightCurrentToken();
+  }
+
+  function endCombat() {
+    combat.started = false;
+    combat.round = 0;
+    combat.turnIndex = -1;
+    combat.resolutionOrder = null;
+    Object.values(combat.entries).forEach((e) => {
+      e.initiative = null;
+      e.bracket = null;
+      e.kiSpentThisRound = 0;
+    });
+    saveCombat();
+    renderAll();
+  }
+
+  // Poise floors at 0 for display purposes only in the desktop tracker;
+  // here, as there, Health/Sanity/Poise can all go negative because Dead,
+  // Shattered, and Humiliated are real states in the rules.
+  function adjustTrack(r, track, delta) {
+    const e = combatEntry(r);
+    const f = computeFiguredCharacteristics(r.state);
+    const max = track === "Health" ? f["Health Levels"] : f[track];
+    const key = "current" + track;
+    const floor = track === "Ki" ? 0 : -99;
+    e[key] = Math.max(floor, Math.min(max, e[key] + delta));
+    saveCombat();
+    renderList();
+  }
+
+  function trackStatus(track, value, r) {
+    if (track === "Health") return healthStatus(value, (r.state.subStats && r.state.subStats.Health) || 0);
+    if (track === "Poise") return poiseStatus(value);
+    if (track === "Sanity") return sanityStatus(value);
+    return null;
+  }
+
+  // ---- Token linking ----
+
+  async function linkToken(r) {
+    if (!obrReady) return;
+    const sel = await OBR.player.getSelection();
+    if (!sel || sel.length === 0) {
+      const note = document.getElementById("obrNote");
+      note.style.display = "";
+      note.textContent = "Select a token on the scene first, then click Link again.";
+      return;
+    }
+    const items = await OBR.scene.items.getItems(sel);
+    const item = items[0];
+    const e = combatEntry(r);
+    e.tokenId = item.id;
+    e.tokenName = item.name || item.text?.plainText || "Token";
+    saveCombat();
+    document.getElementById("obrNote").style.display = "none";
+    renderList();
+  }
+
+  function unlinkToken(r) {
+    const e = combatEntry(r);
+    e.tokenId = null;
+    e.tokenName = null;
+    saveCombat();
+    renderList();
+  }
+
+  // Selecting the token is the least intrusive way to point at whose turn
+  // it is - it uses Owlbear's own selection outline rather than adding and
+  // cleaning up scene items of our own.
+  async function highlightCurrentToken() {
+    if (!obrReady) return;
+    const id = currentTurnId();
+    if (!id) return;
+    const r = roster.find((x) => x.id === id);
+    const e = r && combat.entries[r.id];
+    if (e && e.tokenId) {
+      try { await OBR.player.select([e.tokenId]); } catch (err) {}
+    }
+  }
+
   // ---- Roster management ----
 
   function saveRoster() {
@@ -379,18 +812,33 @@
     const entry = parseEntry(id, text);
     roster.push(entry);
     saveRoster();
-    renderList();
+    renderAll();
     if (entry.state) selectCharacter(id);
   }
 
   function removeCharacter(id) {
     roster = roster.filter((r) => r.id !== id);
     saveRoster();
+    // Drop their combat state too, and pull them out of a turn order that
+    // may already be running, so removing a downed NPC mid-fight is safe.
+    delete combat.entries[id];
+    if (combat.resolutionOrder) {
+      const was = combat.resolutionOrder.indexOf(id);
+      combat.resolutionOrder = combat.resolutionOrder.filter((x) => x !== id);
+      if (was !== -1 && was <= combat.turnIndex) combat.turnIndex -= 1;
+      if (combat.resolutionOrder.length === 0) {
+        combat.turnIndex = -1;
+        combat.resolutionOrder = null;
+      } else if (combat.turnIndex < 0) {
+        combat.turnIndex = 0;
+      }
+    }
+    saveCombat();
     if (activeId === id) {
       activeId = null;
       document.getElementById("detail").style.display = "none";
     }
-    renderList();
+    renderAll();
   }
 
   function selectCharacter(id) {
@@ -402,31 +850,189 @@
     renderList();
   }
 
+  function renderAll() {
+    renderCombatBar();
+    renderList();
+  }
+
+  function renderCombatBar() {
+    const bar = document.getElementById("combatBar");
+    const list = combatants();
+    if (list.length === 0) { bar.style.display = "none"; return; }
+    bar.style.display = "";
+    bar.className = "combat-bar" + (combat.started ? " active" : "");
+
+    if (!combat.started) {
+      const ready = allInitiativeSet();
+      bar.innerHTML = `
+        <div class="cb-top">
+          <span class="cb-phase">Out of combat</span>
+          <span class="cb-round">${list.length} in roster</span>
+        </div>
+        <div class="cb-turn">${ready
+          ? "Initiative set for everyone."
+          : "Set Initiative for each character - roll for Allies and NPCs, type in what the players rolled."}</div>
+        <div class="cb-actions">
+          <button class="btn" id="rollAllBtn">Roll all non-PC Initiative</button>
+          <button class="btn primary" id="beginBtn" ${ready ? "" : "disabled"}>Begin combat</button>
+        </div>`;
+      document.getElementById("rollAllBtn").addEventListener("click", rollAllNonPC);
+      document.getElementById("beginBtn").addEventListener("click", beginCombat);
+      return;
+    }
+
+    if (combat.turnIndex < 0) {
+      const ready = allBracketsDeclared();
+      bar.innerHTML = `
+        <div class="cb-top">
+          <span class="cb-phase">Declare phase</span>
+          <span class="cb-round">Round ${combat.round}</span>
+        </div>
+        <div class="cb-turn">${ready
+          ? "All Action Brackets declared."
+          : "Declare an Action Bracket for everyone, then resolve the round."}</div>
+        <div class="cb-actions">
+          <button class="btn primary" id="resolveBtn" ${ready ? "" : "disabled"}>Resolve round</button>
+          <button class="btn danger" id="endBtn">End combat</button>
+        </div>`;
+      document.getElementById("resolveBtn").addEventListener("click", resolveRound);
+      document.getElementById("endBtn").addEventListener("click", endCombat);
+      return;
+    }
+
+    const id = currentTurnId();
+    const r = roster.find((x) => x.id === id);
+    const e = r ? combatEntry(r) : null;
+    const pos = combat.turnIndex + 1;
+    const total = combat.resolutionOrder.length;
+    const last = pos === total;
+    bar.innerHTML = `
+      <div class="cb-top">
+        <span class="cb-phase">Resolving &middot; ${pos} of ${total}</span>
+        <span class="cb-round">Round ${combat.round}</span>
+      </div>
+      <div class="cb-turn">Now acting: <span class="who">${escapeHtml(r ? r.state.name || "Unnamed" : "-")}</span>${
+        e ? ` &middot; ${escapeHtml(e.bracket)} &middot; Init ${e.initiative}` : ""}</div>
+      <div class="cb-actions">
+        <button class="btn primary" id="nextBtn">${last ? "End round" : "Next turn"}</button>
+        <button class="btn danger" id="endBtn">End combat</button>
+      </div>`;
+    document.getElementById("nextBtn").addEventListener("click", advanceTurn);
+    document.getElementById("endBtn").addEventListener("click", endCombat);
+  }
+
+  // The per-character combat strip: role, Initiative, Action Bracket during
+  // the declare phase, the four tracks, and the token link.
+  function combatRowHtml(r) {
+    const e = combatEntry(r);
+    const f = computeFiguredCharacteristics(r.state);
+    const declaring = combat.started && combat.turnIndex < 0;
+
+    const initCell = e.role === "PC"
+      ? `<span class="mini-label">Init</span><input class="init-box" type="number" data-init="${r.id}" value="${e.initiative ?? ""}" />`
+      : `<span class="mini-label">Init</span><input class="init-box" type="number" data-init="${r.id}" value="${e.initiative ?? ""}" />
+         <button class="btn" data-roll="${r.id}" title="Roll 1d10 + Initiative">Roll</button>`;
+
+    const brackets = declaring
+      ? BRACKETS.map((b) => `<button class="btn${e.bracket === b ? " on" : ""}" data-bracket="${r.id}" data-b="${b}">${b}</button>`).join("")
+        + `<button class="btn" data-bump="${r.id}" title="Spend 1 Ki to move up a bracket" ${
+            !e.bracket || e.currentKi <= 0 || e.bracket === "Fast" ? "disabled" : ""}>Bump (1 Ki)</button>`
+      : "";
+
+    const tracks = combat.started
+      ? [["Health", e.currentHealth, f["Health Levels"]],
+         ["Poise", e.currentPoise, f.Poise],
+         ["Sanity", e.currentSanity, f.Sanity],
+         ["Ki", e.currentKi, f.Ki]].map(([name, cur, max]) => {
+          const status = trackStatus(name, cur, r);
+          const cls = cur <= 0 ? "down" : cur < max ? "hurt" : "";
+          return `<div class="track ${cls}">
+              <span class="tk">${name === "Health" ? "HP" : name.slice(0, 3)}</span>
+              <button data-adj="${r.id}" data-t="${name}" data-d="-1">&minus;</button>
+              <span class="tv">${cur}/${max}</span>
+              <button data-adj="${r.id}" data-t="${name}" data-d="1">+</button>
+            </div>${status ? `<span class="status-chip">${status}</span>` : ""}`;
+        }).join("")
+      : "";
+
+    const token = obrReady
+      ? e.tokenId
+        ? `<button class="btn token-btn linked" data-unlink="${r.id}" title="${escapeHtml(e.tokenName || "")} - click to unlink">Token: ${escapeHtml((e.tokenName || "linked").slice(0, 14))}</button>`
+        : `<button class="btn token-btn" data-link="${r.id}" title="Select a token on the scene, then click">Link token</button>`
+      : "";
+
+    return `<div class="ri-combat">${initCell}${brackets}${tracks}${token}</div>`;
+  }
+
   function renderList() {
     const listEl = document.getElementById("rosterList");
     if (roster.length === 0) {
       listEl.innerHTML = '<div class="list-empty">No characters loaded yet.</div>';
+      renderCombatBar();
       return;
     }
     listEl.innerHTML = "";
     roster.forEach((entry) => {
       const div = document.createElement("div");
-      div.className = `roster-item${entry.id === activeId ? " active" : ""}`;
+      const onTurn = combat.started && currentTurnId() === entry.id;
+      div.className = `roster-item${entry.id === activeId ? " active" : ""}${onTurn ? " on-turn" : ""}`;
       if (entry.state) {
         const natureLabel = entry.state.nature && entry.state.nature.custom
           ? entry.state.nature.custom.label
           : (entry.state.nature && entry.state.nature.picked) || "";
+        const ce = combatEntry(entry);
         div.innerHTML = `
-          <div>
-            <div class="ri-name">${escapeHtml(entry.state.name || "Unnamed")}</div>
-            <div class="ri-concept">${escapeHtml(entry.state.concept || natureLabel || "")}</div>
+          <div class="ri-main">
+            <div>
+              <div class="ri-name">${escapeHtml(entry.state.name || "Unnamed")}</div>
+              <div class="ri-concept">${escapeHtml(entry.state.concept || natureLabel || "")}</div>
+            </div>
+            <div class="ri-meta">
+              <button class="role-chip role-${ce.role}" data-role="${entry.id}" title="Click to change role">${ce.role}</button>
+              <button class="ri-remove" data-id="${entry.id}">Remove</button>
+            </div>
           </div>
-          <button class="ri-remove" data-id="${entry.id}">Remove</button>
+          ${combatRowHtml(entry)}
         `;
         div.addEventListener("click", (e) => {
-          if (e.target.closest(".ri-remove")) return;
+          if (e.target.closest(".ri-remove") || e.target.closest(".ri-combat") || e.target.closest(".role-chip")) return;
           selectCharacter(entry.id);
         });
+        div.querySelector("[data-role]").addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          cycleRole(entry);
+        });
+        const initEl = div.querySelector("[data-init]");
+        if (initEl) {
+          initEl.addEventListener("change", (ev) => {
+            const v = ev.target.value;
+            combatEntry(entry).initiative = v === "" ? null : Number(v);
+            saveCombat();
+            renderAll();
+          });
+        }
+        const rollEl = div.querySelector("[data-roll]");
+        if (rollEl) rollEl.addEventListener("click", (ev) => { ev.stopPropagation(); rollInitiative(entry); });
+        div.querySelectorAll("[data-bracket]").forEach((b) => {
+          b.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            combatEntry(entry).bracket = b.dataset.b;
+            saveCombat();
+            renderAll();
+          });
+        });
+        const bumpEl = div.querySelector("[data-bump]");
+        if (bumpEl) bumpEl.addEventListener("click", (ev) => { ev.stopPropagation(); bumpBracket(entry); });
+        div.querySelectorAll("[data-adj]").forEach((b) => {
+          b.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            adjustTrack(entry, b.dataset.t, Number(b.dataset.d));
+          });
+        });
+        const linkEl = div.querySelector("[data-link]");
+        if (linkEl) linkEl.addEventListener("click", (ev) => { ev.stopPropagation(); linkToken(entry); });
+        const unlinkEl = div.querySelector("[data-unlink]");
+        if (unlinkEl) unlinkEl.addEventListener("click", (ev) => { ev.stopPropagation(); unlinkToken(entry); });
       } else {
         div.innerHTML = `
           <div>
@@ -468,7 +1074,33 @@
       roster = parsed.map((r) => parseEntry(r.id, r.text));
     }
   } catch (e) {}
-  renderList();
+
+  // Load persisted combat state. Written by a later version than the saved
+  // roster in the worst case, so anything referring to a character that is
+  // no longer loaded is dropped rather than left dangling in the turn order.
+  try {
+    const savedCombat = localStorage.getItem(COMBAT_KEY);
+    if (savedCombat) {
+      const parsed = JSON.parse(savedCombat);
+      if (parsed && typeof parsed === "object" && parsed.entries) {
+        combat = Object.assign(createCombat(), parsed);
+        const live = new Set(roster.map((r) => r.id));
+        Object.keys(combat.entries).forEach((id) => { if (!live.has(id)) delete combat.entries[id]; });
+        if (combat.resolutionOrder) {
+          combat.resolutionOrder = combat.resolutionOrder.filter((id) => live.has(id));
+          if (combat.resolutionOrder.length === 0) {
+            combat.turnIndex = -1;
+            combat.resolutionOrder = null;
+          } else if (combat.turnIndex >= combat.resolutionOrder.length) {
+            combat.turnIndex = combat.resolutionOrder.length - 1;
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  renderAll();
+  initOBR();
 </script>
 </body>
 </html>
