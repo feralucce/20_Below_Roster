@@ -26,7 +26,7 @@ https://feralucce.github.io/20_Below_Roster/manifest.json
 2. **Begin combat** once everyone has a number.
 3. **Declare phase.** Pick Slow, Normal, or Fast for each character. **Bump (1 Ki)** spends a point of Ki to move a declared bracket up a step - Slow to Normal, or Normal to Fast.
 4. **Resolve round** builds the order: all Fast act, then all Normal, then all Slow, with Initiative breaking ties inside each bracket. The current combatant is highlighted, and their linked token is selected on the scene.
-5. **Next turn** walks the order. At the end of it the round advances and everyone re-declares - brackets are per-round.
+5. **Next turn** walks the order. Whoever is up sits at the top of the list, everyone still to act follows below them, and characters who have already gone drop to the bottom, dimmed - so with a long roster you aren't scrolling to find the active one. They stay in the list rather than vanishing, because a character can still take damage after their own turn. At the end of the order the round advances and everyone re-declares - brackets are per-round.
 6. **End combat** clears Initiative and brackets. Damage is left alone, since it doesn't heal just because the fight ended.
 
 The **HP / POI / SAN / KI** tracks on each row take damage and healing with the − and + buttons, capped at that character's own maximums. Health, Poise, and Sanity can go below zero on purpose - Unconscious, Dead, Flustered, Humiliated, Overwhelmed, and Shattered all show as a chip on the row when reached.

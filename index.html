@@ -223,6 +223,10 @@
   .btn.on { background: var(--accent-dim); border-color: var(--gold); color: var(--text); font-weight: 700; }
 
   .roster-item.on-turn { border-left-color: var(--gold); background: var(--accent-dim); box-shadow: 0 0 0 1px var(--gold) inset; }
+  /* Already acted this round - dropped to the bottom and dimmed, but still
+     fully usable, since they can take damage after their own turn. */
+  .roster-item.acted { opacity: 0.5; }
+  .roster-item.acted:hover { opacity: 1; }
   .roster-item { flex-wrap: wrap; }
   .ri-main { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.5rem; }
   .ri-meta { display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
@@ -964,19 +968,34 @@
     return `<div class="ri-combat">${initCell}${brackets}${tracks}${token}</div>`;
   }
 
+  // Has this character already taken their turn this round?
+  function hasActed(id) {
+    if (!combat.started || combat.turnIndex < 0 || !combat.resolutionOrder) return false;
+    const i = combat.resolutionOrder.indexOf(id);
+    return i !== -1 && i < combat.turnIndex;
+  }
+
   // The list stays in the order characters were added right through setup
   // and the declare phase - rolling Initiative and picking brackets doesn't
   // move anything, so rows don't shift around while you're still typing
-  // numbers in. Resolve round is what reorders: from then until the round
-  // ends, the list follows the actual turn order (Fast band, then Normal,
-  // then Slow, Initiative breaking ties), so the highlighted row walks
-  // straight down it.
+  // numbers in.
+  //
+  // Resolve round is what reorders it. From then until the round ends the
+  // list is the turn order rotated to start at whoever is up: the current
+  // combatant sits at the top, everyone still to act follows in bracket
+  // and Initiative order, and those who have already gone collect at the
+  // bottom in the order they went. With a big roster that keeps the active
+  // character on screen without scrolling, and reads as a "who's left"
+  // queue. They stay in the list rather than being hidden because a
+  // character who has already acted can still take damage afterwards.
   //
   // Anything not in the turn order - a file that failed to load, or someone
-  // added mid-round - sits at the bottom rather than being dropped.
+  // added mid-round - sits at the very bottom rather than being dropped.
   function displayOrder() {
     if (!combat.started || combat.turnIndex < 0 || !combat.resolutionOrder) return roster;
-    const rank = new Map(combat.resolutionOrder.map((id, i) => [id, i]));
+    const o = combat.resolutionOrder;
+    const rotated = o.slice(combat.turnIndex).concat(o.slice(0, combat.turnIndex));
+    const rank = new Map(rotated.map((id, i) => [id, i]));
     return roster.slice().sort((a, b) => {
       const ra = rank.has(a.id) ? rank.get(a.id) : Infinity;
       const rb = rank.has(b.id) ? rank.get(b.id) : Infinity;
@@ -995,7 +1014,8 @@
     displayOrder().forEach((entry) => {
       const div = document.createElement("div");
       const onTurn = combat.started && currentTurnId() === entry.id;
-      div.className = `roster-item${entry.id === activeId ? " active" : ""}${onTurn ? " on-turn" : ""}`;
+      const acted = hasActed(entry.id);
+      div.className = `roster-item${entry.id === activeId ? " active" : ""}${onTurn ? " on-turn" : ""}${acted ? " acted" : ""}`;
       if (entry.state) {
         const natureLabel = entry.state.nature && entry.state.nature.custom
           ? entry.state.nature.custom.label
