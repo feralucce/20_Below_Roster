@@ -387,12 +387,14 @@
   // opened directly in a browser (which is also how it gets tested) - only
   // the token-linking features go quiet.
   let OBR = null;
+  let buildImage = null;
   let obrReady = false;
 
   async function initOBR() {
     try {
       const mod = await import("https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm");
       OBR = mod.default;
+      buildImage = mod.buildImage;
       if (!OBR || !OBR.isAvailable) throw new Error("not in Owlbear");
       await new Promise((resolve) => OBR.onReady(resolve));
       obrReady = true;
@@ -631,6 +633,46 @@
     renderList();
   }
 
+  // Puts a token for this character on the scene and links it in the same
+  // step, which is the whole reason this lives here rather than in a
+  // separate extension: dropping and linking were two tools and a manual
+  // pairing before.
+  //
+  // Centred on the current viewport with a little jitter, so clicking it
+  // four times for four wolves doesn't stack them exactly on top of one
+  // another.
+  async function dropToken(r) {
+    if (!obrReady || !buildImage || !r.state) return;
+    const name = r.state.name || "Unnamed";
+    const e = combatEntry(r);
+    const url = e.icon || media.makePlaceholder(name);
+    const size = await media.imageSize(url);
+
+    const [vpWidth, vpHeight, vpPos, vpScale] = await Promise.all([
+      OBR.viewport.getWidth(),
+      OBR.viewport.getHeight(),
+      OBR.viewport.getPosition(),
+      OBR.viewport.getScale(),
+    ]);
+    const cx = (-vpPos.x + vpWidth / 2) / vpScale + (Math.random() - 0.5) * 150;
+    const cy = (-vpPos.y + vpHeight / 2) / vpScale + (Math.random() - 0.5) * 150;
+
+    const item = buildImage(
+      { width: size.w, height: size.h, url, mime: media.mimeOf(url) },
+      { dpi: size.w, offset: { x: size.w / 2, y: size.h / 2 } },
+    )
+      .position({ x: cx, y: cy })
+      .name(name)
+      .layer("CHARACTER")
+      .build();
+
+    await OBR.scene.items.addItems([item]);
+    e.tokenId = item.id;
+    e.tokenName = name;
+    saveCombat();
+    renderList();
+  }
+
   function unlinkToken(r) {
     const e = combatEntry(r);
     e.tokenId = null;
@@ -832,7 +874,8 @@
     const token = obrReady
       ? e.tokenId
         ? `<button class="btn token-btn linked" data-unlink="${r.id}" title="${escapeHtml(e.tokenName || "")} - click to unlink">Token: ${escapeHtml((e.tokenName || "linked").slice(0, 14))}</button>`
-        : `<button class="btn token-btn" data-link="${r.id}" title="Select a token on the scene, then click">Link token</button>`
+        : `<button class="btn token-btn" data-drop="${r.id}" title="Put this character on the scene and link it">+ Token</button>`
+          + `<button class="btn token-btn" data-link="${r.id}" title="Select a token already on the scene, then click">Link</button>`
       : "";
 
     return `<div class="ri-combat">${initCell}${brackets}${tracks}${token}</div>`;
@@ -929,6 +972,8 @@
             adjustTrack(entry, b.dataset.t, Number(b.dataset.d));
           });
         });
+        const dropEl = div.querySelector("[data-drop]");
+        if (dropEl) dropEl.addEventListener("click", (ev) => { ev.stopPropagation(); dropToken(entry); });
         const linkEl = div.querySelector("[data-link]");
         if (linkEl) linkEl.addEventListener("click", (ev) => { ev.stopPropagation(); linkToken(entry); });
         const unlinkEl = div.querySelector("[data-unlink]");
