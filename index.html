@@ -336,34 +336,18 @@
   let roster = []; // [{ id, text, state|null, error|null }]
   let activeId = null;
 
-  // ---- Shared rules logic ----
+  // ---- Shared combat engine ----
   //
-  // Health/Poise/Sanity thresholds are rules, not UI, and they have already
-  // moved once (Poise's below-0 exception, 2026-08-20). Pull them live from
-  // the character creator rather than keeping a third hand-copied set that
-  // can quietly disagree with the app and the desktop tracker. Dynamic
-  // import so a failed fetch degrades instead of blanking the panel - the
-  // fallbacks below must stay identical to app/state.js.
-  let healthStatus = (current, healthSubStat) => {
-    if (current > 0) return null;
-    return current < 0 && current <= -healthSubStat ? "Dead" : "Unconscious";
-  };
-  let poiseStatus = (current) => (current < 0 ? "Humiliated" : current === 0 ? "Flustered" : null);
-  let sanityStatus = (current) => (current < 0 ? "Shattered" : current === 0 ? "Overwhelmed" : null);
-  let rollD10 = () => 1 + Math.floor(Math.random() * 10);
-
-  (async () => {
-    try {
-      const s = await import("https://20belowrpg.com/app/state.js");
-      const r = await import("https://20belowrpg.com/app/roller/core.js");
-      if (s.healthStatus) healthStatus = s.healthStatus;
-      if (s.poiseStatus) poiseStatus = s.poiseStatus;
-      if (s.sanityStatus) sanityStatus = s.sanityStatus;
-      if (r.rollD10) rollD10 = r.rollD10;
-    } catch (e) {
-      // Offline or the site moved - the local fallbacks above stand in.
-    }
-  })();
+  // The rules math and the whole round/turn engine live in the main
+  // 20_Below repo and are copied in by scripts/sync-roster.mjs - see
+  // lib/README.md. They ship with the extension rather than being fetched
+  // from the site, because unlike the small status helpers this had been
+  // fetching before, a combat engine has no sensible offline fallback.
+  //
+  // The same module backs the standalone web tracker and the desktop app,
+  // so all three can't drift on how a round actually runs.
+  import * as engine from "./lib/combat/model.js";
+  const { ROLES, BRACKETS, computeFiguredCharacteristics } = engine;
 
   // ---- Owlbear bridge ----
   //
@@ -382,16 +366,10 @@
       obrReady = true;
       // A token deleted from the scene should not leave a dead link behind.
       OBR.scene.items.onChange((items) => {
-        const live = new Set(items.map((i) => i.id));
-        let changed = false;
-        Object.values(combat.entries).forEach((e) => {
-          if (e.tokenId && !live.has(e.tokenId)) {
-            e.tokenId = null;
-            e.tokenName = null;
-            changed = true;
-          }
-        });
-        if (changed) { saveCombat(); renderList(); }
+        if (engine.pruneTokens(combat, items.map((i) => i.id))) {
+          saveCombat();
+          renderList();
+        }
       });
     } catch (e) {
       obrReady = false;
@@ -411,20 +389,6 @@
     Water: ["Stamina", "Health"],
     Moira: ["Atropos", "Klotho"],
   };
-
-  function computeFiguredCharacteristics(state) {
-    const s = state.subStats || {};
-    const ki = (((s.Soak || 0) + (s.Initiative || 0) + (s.Ferocity || 0) + (s.Stamina || 0) + (s.Atropos || 0)) / 5) * 2;
-    return {
-      "Health Levels": 5 + (s.Health || 0),
-      Poise: 5 + (s.Presence || 0),
-      Sanity: 5 + (s.Psyche || 0),
-      Defense: 10 - (s.Atropos || 0),
-      "Movement Rate": 5 + ((state.attributes && state.attributes.Air) || 0),
-      "Carrying Capacity": Math.pow(s.Potence || 0, 2) * 10,
-      Ki: Math.ceil(ki),
-    };
-  }
 
   function effectiveResourceLevel(state, name) {
     if (state.resourceZeroed && state.resourceZeroed[name]) return 0;
@@ -551,42 +515,15 @@
 
   // ---- Combat state ----
   //
-  // Mirrors gm-app/gm-state.js (the desktop Combat Tracker) so the two can't
-  // drift on how a round actually runs. Kept in its own storage key and
-  // keyed by roster entry id, so an existing saved roster loads untouched
-  // and combat state can be cleared without losing the characters.
-  let combat = createCombat();
-
-  function createCombat() {
-    return {
-      started: false,
-      round: 0,
-      turnIndex: -1, // -1 = declare phase; >= 0 = index into resolutionOrder
-      resolutionOrder: null,
-      entries: {}, // rosterId -> per-character combat state
-    };
-  }
-
-  // Combat state is created lazily so characters added mid-fight just work.
-  function combatEntry(r) {
-    let e = combat.entries[r.id];
-    if (!e) {
-      const f = computeFiguredCharacteristics(r.state);
-      e = combat.entries[r.id] = {
-        role: "NPC",
-        initiative: null,
-        bracket: null,
-        kiSpentThisRound: 0,
-        currentHealth: r.state.currentHealth ?? f["Health Levels"],
-        currentPoise: r.state.currentPoise ?? f.Poise,
-        currentSanity: r.state.currentSanity ?? f.Sanity,
-        currentKi: r.state.currentKi ?? f.Ki,
-        tokenId: null,
-        tokenName: null,
-      };
-    }
-    return e;
-  }
+  // The engine is lib/combat/model.js (generated - see lib/README.md), shared
+  // with the standalone web tracker and the desktop app so none of the three
+  // can drift on how a round runs. The split: the engine owns the rules, this
+  // file owns persistence and redrawing.
+  //
+  // Combat lives in its own storage key, keyed by roster entry id, so an
+  // existing saved roster loads untouched and combat can be cleared without
+  // losing the characters.
+  let combat = engine.createCombat();
 
   function saveCombat() {
     try {
@@ -594,157 +531,52 @@
     } catch (e) {}
   }
 
+  // Everything the engine acts on: roster entries whose file actually parsed.
   function combatants() {
     return roster.filter((r) => r.state);
   }
 
-  const ROLES = ["PC", "Ally", "NPC"];
-  const BRACKETS = ["Slow", "Normal", "Fast"];
+  function combatEntry(r) {
+    return engine.entryFor(combat, r);
+  }
 
-  function cycleRole(r) {
-    const e = combatEntry(r);
-    e.role = ROLES[(ROLES.indexOf(e.role) + 1) % ROLES.length];
+  // Every mutation is the same three steps - change state, persist, redraw.
+  // Most need the combat bar redrawn too (a button enabling, the phase
+  // changing); the few that only affect one row pass renderList instead.
+  function act(fn, redraw) {
+    fn();
     saveCombat();
-    renderList();
+    (redraw || renderAll)();
   }
 
-  // NPCs and Allies roll 1d10 + their Initiative sub-stat. PCs report what
-  // they rolled at the table, so those are typed in instead.
-  function rollInitiative(r) {
-    const e = combatEntry(r);
-    e.initiative = rollD10() + ((r.state.subStats && r.state.subStats.Initiative) || 0);
-    saveCombat();
-    renderAll();
-  }
-
-  function rollAllNonPC() {
-    combatants().forEach((r) => {
-      const e = combatEntry(r);
-      if (e.role === "PC") return;
-      e.initiative = rollD10() + ((r.state.subStats && r.state.subStats.Initiative) || 0);
-    });
-    saveCombat();
-    renderAll();
-  }
-
-  function allInitiativeSet() {
-    const list = combatants();
-    return list.length > 0 && list.every((r) => combatEntry(r).initiative != null);
-  }
-
-  function allBracketsDeclared() {
-    const list = combatants();
-    return list.length > 0 && list.every((r) => combatEntry(r).bracket != null);
-  }
-
-  // Initiative is rolled once at the start of combat and never re-rolled,
-  // per rules.md#combat-order.
-  function beginCombat() {
-    combat.started = true;
-    combat.round = 1;
-    combat.turnIndex = -1;
-    combat.resolutionOrder = null;
-    combatants().forEach((r) => {
-      const e = combatEntry(r);
-      e.bracket = null;
-      e.kiSpentThisRound = 0;
-    });
-    saveCombat();
-    renderAll();
-  }
-
-  // 1 Ki per step, Slow -> Normal -> Fast. No-ops past Fast or with no Ki
-  // left rather than letting either run off the end.
-  function bumpBracket(r) {
-    const e = combatEntry(r);
-    if (!e.bracket || e.currentKi <= 0) return;
-    const i = BRACKETS.indexOf(e.bracket);
-    if (i >= BRACKETS.length - 1) return;
-    e.bracket = BRACKETS[i + 1];
-    e.currentKi -= 1;
-    e.kiSpentThisRound += 1;
-    saveCombat();
-    renderAll();
-  }
-
-  // All Fast act, then all Normal, then all Slow; Initiative breaks ties
-  // within a bracket.
-  function resolveRound() {
-    const rank = { Fast: 0, Normal: 1, Slow: 2 };
-    combat.resolutionOrder = combatants()
-      .slice()
-      .sort((a, b) => {
-        const ea = combatEntry(a), eb = combatEntry(b);
-        return rank[ea.bracket] - rank[eb.bracket] || eb.initiative - ea.initiative;
-      })
-      .map((r) => r.id);
-    combat.turnIndex = 0;
-    saveCombat();
-    renderAll();
-    highlightCurrentToken();
-  }
-
-  function currentTurnId() {
-    const { resolutionOrder, turnIndex } = combat;
-    if (!resolutionOrder || turnIndex < 0 || turnIndex >= resolutionOrder.length) return null;
-    return resolutionOrder[turnIndex];
-  }
-
-  // Once the order is exhausted, brackets are cleared and the round starts
-  // over at the declare phase - they are re-declared every round.
-  function advanceTurn() {
-    if (!combat.resolutionOrder) return;
-    if (combat.turnIndex + 1 < combat.resolutionOrder.length) {
-      combat.turnIndex += 1;
-    } else {
-      combat.round += 1;
-      combat.turnIndex = -1;
-      combat.resolutionOrder = null;
-      combatants().forEach((r) => {
-        const e = combatEntry(r);
-        e.bracket = null;
-        e.kiSpentThisRound = 0;
-      });
-    }
-    saveCombat();
-    renderAll();
-    highlightCurrentToken();
-  }
-
-  function endCombat() {
-    combat.started = false;
-    combat.round = 0;
-    combat.turnIndex = -1;
-    combat.resolutionOrder = null;
-    Object.values(combat.entries).forEach((e) => {
-      e.initiative = null;
-      e.bracket = null;
-      e.kiSpentThisRound = 0;
-    });
-    saveCombat();
-    renderAll();
-  }
-
-  // Poise floors at 0 for display purposes only in the desktop tracker;
-  // here, as there, Health/Sanity/Poise can all go negative because Dead,
-  // Shattered, and Humiliated are real states in the rules.
+  function cycleRole(r) { act(() => engine.cycleRole(combat, r), renderList); }
+  function rollInitiative(r) { act(() => engine.rollInitiative(combat, r)); }
+  function rollAllNonPC() { act(() => engine.rollAllNonPC(combat, combatants())); }
+  function beginCombat() { act(() => engine.beginCombat(combat, combatants())); }
+  function endCombat() { act(() => engine.endCombat(combat)); }
+  function bumpBracket(r) { act(() => engine.bumpBracket(combat, r)); }
+  function setBracket(r, bracket) { act(() => engine.setBracket(combat, r, bracket)); }
+  function setInitiative(r, value) { act(() => engine.setInitiative(combat, r, value)); }
   function adjustTrack(r, track, delta) {
-    const e = combatEntry(r);
-    const f = computeFiguredCharacteristics(r.state);
-    const max = track === "Health" ? f["Health Levels"] : f[track];
-    const key = "current" + track;
-    const floor = track === "Ki" ? 0 : -99;
-    e[key] = Math.max(floor, Math.min(max, e[key] + delta));
-    saveCombat();
-    renderList();
+    act(() => engine.adjustTrack(combat, r, track, delta), renderList);
   }
 
-  function trackStatus(track, value, r) {
-    if (track === "Health") return healthStatus(value, (r.state.subStats && r.state.subStats.Health) || 0);
-    if (track === "Poise") return poiseStatus(value);
-    if (track === "Sanity") return sanityStatus(value);
-    return null;
+  function resolveRound() {
+    act(() => engine.resolveRound(combat, combatants()));
+    highlightCurrentToken();
   }
+
+  function advanceTurn() {
+    act(() => engine.advanceTurn(combat, combatants()));
+    highlightCurrentToken();
+  }
+
+  // Read-only passthroughs, so the render code reads the same either way.
+  const allInitiativeSet = () => engine.allInitiativeSet(combat, combatants());
+  const allBracketsDeclared = () => engine.allBracketsDeclared(combat, combatants());
+  const currentTurnId = () => engine.currentTurnId(combat);
+  const hasActed = (id) => engine.hasActed(combat, id);
+  const trackStatus = (track, value, r) => engine.trackStatus(track, value, r);
 
   // ---- Token linking ----
 
@@ -825,18 +657,7 @@
     saveRoster();
     // Drop their combat state too, and pull them out of a turn order that
     // may already be running, so removing a downed NPC mid-fight is safe.
-    delete combat.entries[id];
-    if (combat.resolutionOrder) {
-      const was = combat.resolutionOrder.indexOf(id);
-      combat.resolutionOrder = combat.resolutionOrder.filter((x) => x !== id);
-      if (was !== -1 && was <= combat.turnIndex) combat.turnIndex -= 1;
-      if (combat.resolutionOrder.length === 0) {
-        combat.turnIndex = -1;
-        combat.resolutionOrder = null;
-      } else if (combat.turnIndex < 0) {
-        combat.turnIndex = 0;
-      }
-    }
+    engine.removeCombatant(combat, id);
     saveCombat();
     if (activeId === id) {
       activeId = null;
@@ -968,13 +789,6 @@
     return `<div class="ri-combat">${initCell}${brackets}${tracks}${token}</div>`;
   }
 
-  // Has this character already taken their turn this round?
-  function hasActed(id) {
-    if (!combat.started || combat.turnIndex < 0 || !combat.resolutionOrder) return false;
-    const i = combat.resolutionOrder.indexOf(id);
-    return i !== -1 && i < combat.turnIndex;
-  }
-
   // The list stays in the order characters were added right through setup
   // and the declare phase - rolling Initiative and picking brackets doesn't
   // move anything, so rows don't shift around while you're still typing
@@ -992,9 +806,8 @@
   // Anything not in the turn order - a file that failed to load, or someone
   // added mid-round - sits at the very bottom rather than being dropped.
   function displayOrder() {
-    if (!combat.started || combat.turnIndex < 0 || !combat.resolutionOrder) return roster;
-    const o = combat.resolutionOrder;
-    const rotated = o.slice(combat.turnIndex).concat(o.slice(0, combat.turnIndex));
+    const rotated = engine.rotatedOrder(combat);
+    if (!rotated) return roster;
     const rank = new Map(rotated.map((id, i) => [id, i]));
     return roster.slice().sort((a, b) => {
       const ra = rank.has(a.id) ? rank.get(a.id) : Infinity;
@@ -1045,10 +858,7 @@
         const initEl = div.querySelector("[data-init]");
         if (initEl) {
           initEl.addEventListener("change", (ev) => {
-            const v = ev.target.value;
-            combatEntry(entry).initiative = v === "" ? null : Number(v);
-            saveCombat();
-            renderAll();
+            setInitiative(entry, ev.target.value);
           });
         }
         const rollEl = div.querySelector("[data-roll]");
@@ -1056,9 +866,7 @@
         div.querySelectorAll("[data-bracket]").forEach((b) => {
           b.addEventListener("click", (ev) => {
             ev.stopPropagation();
-            combatEntry(entry).bracket = b.dataset.b;
-            saveCombat();
-            renderAll();
+            setBracket(entry, b.dataset.b);
           });
         });
         const bumpEl = div.querySelector("[data-bump]");
@@ -1123,18 +931,10 @@
     if (savedCombat) {
       const parsed = JSON.parse(savedCombat);
       if (parsed && typeof parsed === "object" && parsed.entries) {
-        combat = Object.assign(createCombat(), parsed);
-        const live = new Set(roster.map((r) => r.id));
-        Object.keys(combat.entries).forEach((id) => { if (!live.has(id)) delete combat.entries[id]; });
-        if (combat.resolutionOrder) {
-          combat.resolutionOrder = combat.resolutionOrder.filter((id) => live.has(id));
-          if (combat.resolutionOrder.length === 0) {
-            combat.turnIndex = -1;
-            combat.resolutionOrder = null;
-          } else if (combat.turnIndex >= combat.resolutionOrder.length) {
-            combat.turnIndex = combat.resolutionOrder.length - 1;
-          }
-        }
+        combat = engine.reconcile(
+          Object.assign(engine.createCombat(), parsed),
+          roster.map((r) => r.id),
+        );
       }
     }
   } catch (e) {}
