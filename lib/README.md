@@ -9,4 +9,5 @@ and re-run the sync; anything changed here is overwritten.
 | `state.js` | `app/state.js` |
 | `roller/core.js` | `app/roller/core.js` |
 | `combat/model.js` | `app/combat/model.js` |
+| `media.js` | `app/media.js` |
 | `../index.html` | `tracker/index.html` |

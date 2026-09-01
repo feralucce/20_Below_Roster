@@ -67,7 +67,27 @@
     margin-bottom: 0.6rem;
   }
   .file-btn:hover { border-color: var(--accent); color: var(--text); }
-  #addFile { display: none; }
+  .file-btn.secondary { font-size: 0.7rem; padding: 0.35rem; margin-bottom: 0.35rem; }
+  #addFile, #addFolder { display: none; }
+
+  .drop-zone.dragging {
+    outline: 2px dashed var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* Token art beside the name. Square with a soft corner rather than a
+     circle, so art drawn for a square VTT token isn't cropped oddly. */
+  .ri-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 5px;
+    object-fit: cover;
+    background: var(--panel-2);
+    border: 1px solid var(--panel-border);
+    flex-shrink: 0;
+  }
+  .ri-ident { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 
   .small-link {
     display: block;
@@ -322,8 +342,12 @@
 
 <h1><img src="https://feralucce.github.io/20_Below_Roster/icon.svg" alt="" width="20" height="20" /> 20 Below Battle Tracker</h1>
 
-<label class="file-btn" for="addFile">Add character JSON(s)&hellip;</label>
-<input type="file" id="addFile" accept="application/json,.json" multiple />
+<div id="dropZone" class="drop-zone">
+  <label class="file-btn" for="addFile">Add character JSON(s)&hellip;</label>
+  <input type="file" id="addFile" accept="application/json,.json,image/*" multiple />
+  <label class="file-btn secondary" for="addFolder">&hellip;or pick a whole folder</label>
+  <input type="file" id="addFolder" webkitdirectory directory multiple />
+</div>
 <div class="empty-note" style="margin-top:-0.3rem;margin-bottom:0.6rem">Export characters from the <a href="https://20belowrpg.com/app/" target="_blank" style="color:var(--accent)">20 Below character creator</a> (Sheet step &rarr; Save/Export) - players and NPCs both work. Read-only, no editing here.</div>
 
 <div id="obrNote" class="obr-note" style="display:none"></div>
@@ -354,6 +378,7 @@
   // The same module backs the standalone web tracker and the desktop app,
   // so all three can't drift on how a round actually runs.
   import * as engine from "./lib/combat/model.js";
+  import * as media from "./lib/media.js";
   const { ROLES, BRACKETS, computeFiguredCharacteristics } = engine;
 
   // ---- Owlbear bridge ----
@@ -632,31 +657,48 @@
 
   function saveRoster() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(roster.map((r) => ({ id: r.id, text: r.text }))));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(roster.map((r) => ({ id: r.id, text: r.text, icon: r.icon || null }))));
     } catch (e) {
       // storage unavailable - roster still works for this session
     }
   }
 
-  function parseEntry(id, text) {
+  function parseEntry(id, text, icon) {
     try {
       const state = JSON.parse(text);
       if (!state || typeof state !== "object" || !state.attributes || !state.subStats) {
-        return { id, text, state: null, error: "Not a 20 Below character export" };
+        return { id, text, icon: icon || null, state: null, error: "Not a 20 Below character export" };
       }
-      return { id, text, state, error: null };
+      return { id, text, icon: icon || null, state, error: null };
     } catch (e) {
-      return { id, text, state: null, error: "Invalid JSON" };
+      return { id, text, icon: icon || null, state: null, error: "Invalid JSON" };
     }
   }
 
-  function addCharacterText(text) {
-    const id = `c${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
-    const entry = parseEntry(id, text);
-    roster.push(entry);
+  // Token art: an image handed over alongside a character file, with the
+  // same name before the extension - dire-wolf.json and dire-wolf.png - is
+  // taken as that character's art. Anything without one gets generated
+  // stand-in art so every row reads the same.
+  //
+  // A browser can't go looking in a folder by itself, so "alongside" means
+  // the image arrived in the same batch: multi-selected, picked as a folder,
+  // or dropped together. All three end up here.
+  async function addFiles(fileList) {
+    const paired = await media.pairFiles(fileList);
+    if (!paired.length) return;
+    let firstId = null;
+    for (const p of paired) {
+      const id = `c${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
+      const entry = parseEntry(id, p.text, p.icon);
+      if (entry.state && !entry.icon) {
+        entry.icon = media.makePlaceholder(entry.state.name || "Unnamed", 128);
+      }
+      roster.push(entry);
+      if (entry.state && !firstId) firstId = id;
+    }
     saveRoster();
     renderAll();
-    if (entry.state) selectCharacter(id);
+    if (paired.length === 1 && firstId) selectCharacter(firstId);
   }
 
   function removeCharacter(id) {
@@ -843,9 +885,12 @@
         const ce = combatEntry(entry);
         div.innerHTML = `
           <div class="ri-main">
-            <div>
-              <div class="ri-name">${escapeHtml(entry.state.name || "Unnamed")}</div>
-              <div class="ri-concept">${escapeHtml(entry.state.concept || natureLabel || "")}</div>
+            <div class="ri-ident">
+              ${entry.icon ? `<img class="ri-icon" src="${entry.icon}" alt="" />` : ""}
+              <div style="min-width:0">
+                <div class="ri-name">${escapeHtml(entry.state.name || "Unnamed")}</div>
+                <div class="ri-concept">${escapeHtml(entry.state.concept || natureLabel || "")}</div>
+              </div>
             </div>
             <div class="ri-meta">
               <button class="role-chip role-${ce.role}" data-role="${entry.id}" title="Click to change role">${ce.role}</button>
@@ -905,14 +950,52 @@
     });
   }
 
-  document.getElementById("addFile").addEventListener("change", (e) => {
-    const files = [...e.target.files];
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => addCharacterText(reader.result);
-      reader.readAsText(file);
+  ["addFile", "addFolder"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", async (e) => {
+      await addFiles(e.target.files);
+      e.target.value = "";
     });
-    e.target.value = "";
+  });
+
+  // Dropping a folder gives directory entries rather than files, so walk
+  // them; a plain multi-file drop skips the walk entirely.
+  async function filesFromDataTransfer(dt) {
+    const items = [...(dt.items || [])];
+    const entries = items
+      .map((i) => (i.webkitGetAsEntry ? i.webkitGetAsEntry() : null))
+      .filter(Boolean);
+    if (!entries.length) return [...dt.files];
+
+    const out = [];
+    async function walk(entry) {
+      if (entry.isFile) {
+        out.push(await new Promise((res, rej) => entry.file(res, rej)));
+        return;
+      }
+      if (!entry.isDirectory) return;
+      const reader = entry.createReader();
+      // readEntries returns a batch at a time, so keep asking until empty.
+      for (;;) {
+        const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+        if (!batch.length) break;
+        for (const e of batch) await walk(e);
+      }
+    }
+    for (const e of entries) await walk(e);
+    return out;
+  }
+
+  const dropZone = document.getElementById("dropZone");
+  ["dragenter", "dragover"].forEach((ev) =>
+    dropZone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragging");
+    }));
+  ["dragleave", "drop"].forEach((ev) =>
+    dropZone.addEventListener(ev, () => dropZone.classList.remove("dragging")));
+  dropZone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    await addFiles(await filesFromDataTransfer(e.dataTransfer));
   });
 
   document.getElementById("backBtn").addEventListener("click", () => {
@@ -926,7 +1009,7 @@
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      roster = parsed.map((r) => parseEntry(r.id, r.text));
+      roster = parsed.map((r) => parseEntry(r.id, r.text, r.icon));
     }
   } catch (e) {}
 
