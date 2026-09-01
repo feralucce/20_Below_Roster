@@ -1,5 +1,5 @@
 {
-  "name": "20 Below Roster",
+  "name": "20 Below Battle Tracker",
   "version": "1.0.0",
   "manifest_version": 1,
   "author": "Feralucce",
@@ -7,7 +7,7 @@
   "icon": "https://feralucce.github.io/20_Below_Roster/icon.svg",
   "description": "A GM-side roster and combat tracker for 20 Below: Initiative, Action Brackets, turn order, damage tracks, and scene tokens.",
   "action": {
-    "title": "20 Below Roster",
+    "title": "20 Below Battle Tracker",
     "icon": "https://feralucce.github.io/20_Below_Roster/icon.svg",
     "popover": "https://feralucce.github.io/20_Below_Roster/index.html",
     "height": 780,
