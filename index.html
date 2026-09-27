@@ -421,6 +421,14 @@
   .enc-row { display: flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0; border-top: 1px solid var(--panel-border); font-size: 0.78rem; margin-top: 0.3rem; }
   .enc-row-name { font-weight: 600; margin-right: auto; }
   .enc-row-who { color: var(--text-dim); font-size: 0.68rem; display: block; font-weight: 400; }
+  .ask-overlay { position: fixed; inset: 0; z-index: 40; background: rgba(2, 8, 12, 0.72);
+    display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .ask-box { background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 0.8rem 0.9rem;
+    width: 100%; max-width: 26rem; }
+  .ask-text { margin: 0 0 0.6rem; font-size: 0.82rem; line-height: 1.45; }
+  .ask-input { width: 100%; margin-bottom: 0.6rem; }
+  .ask-buttons { display: flex; justify-content: flex-end; gap: 0.4rem; }
+  .btn.danger-solid { background: color-mix(in srgb, var(--danger) 30%, var(--panel)); border-color: var(--danger); color: var(--text); font-weight: 600; }
   .party-list { font-size: 0.74rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.45; }
   .party-list strong { color: var(--text); }
   .party-controls { margin-top: 0.45rem; }
@@ -775,6 +783,46 @@
     const level = (state.resources && state.resources[name]) ?? 0;
     const penalty = (state.resourcePenalties && state.resourcePenalties[name]) ?? 0;
     return Math.max(Math.min(level, 1), level - penalty);
+  }
+
+  // Asking and confirming happen in the page, not in the browser's own
+  // pop-ups: Owlbear Rodeo runs extensions in a sandboxed frame that blocks
+  // prompt() and confirm(), which then answer "no" without showing
+  // anything - Save this encounter, Clear encounter and every Delete did
+  // nothing there. ask() resolves to the typed text (with `value`), true
+  // (a plain yes), or null (Cancel, Escape, or a click outside).
+  function ask(text, { value = null, ok = "OK", danger = false } = {}) {
+    return new Promise((resolve) => {
+      const wrap = document.createElement("div");
+      wrap.className = "ask-overlay";
+      wrap.innerHTML = `<form class="ask-box">
+          <p class="ask-text"></p>
+          ${value === null ? "" : `<input class="tag-input ask-input" type="text" />`}
+          <div class="ask-buttons">
+            <button type="button" class="btn" data-cancel>Cancel</button>
+            <button type="submit" class="btn ${danger ? "danger-solid" : "primary"}">${escapeHtml(ok)}</button>
+          </div>
+        </form>`;
+      wrap.querySelector(".ask-text").textContent = text;
+      const input = wrap.querySelector(".ask-input");
+      if (input) input.value = value;
+      const done = (answer) => {
+        wrap.remove();
+        document.removeEventListener("keydown", onKey);
+        resolve(answer);
+      };
+      const onKey = (e) => { if (e.key === "Escape") done(null); };
+      wrap.querySelector("form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        done(input ? input.value : true);
+      });
+      wrap.querySelector("[data-cancel]").addEventListener("click", () => done(null));
+      wrap.addEventListener("click", (e) => { if (e.target === wrap) done(null); });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(wrap);
+      (input || wrap.querySelector("[type=submit]")).focus();
+      if (input) input.select();
+    });
   }
 
   function escapeHtml(s) {
@@ -1385,7 +1433,7 @@
 
   async function deleteMine(id) {
     const e = mine.find((x) => x.id === id);
-    if (!e || !confirm(`Remove ${e.name} from your entries? Anything already in the encounter stays there.`)) return;
+    if (!e || !(await ask(`Remove ${e.name} from your entries? Anything already in the encounter stays there.`, { ok: "Remove", danger: true }))) return;
     await lib.remove(id);
     mine = mine.filter((x) => x.id !== id);
     renderLibrary();
@@ -1428,6 +1476,7 @@
     const paired = await media.pairFiles(files);
     let added = 0;
     let merged = 0;
+    let encountersIn = 0;
     const failed = [];
     const newEntries = [];
     for (const p of paired) {
@@ -1446,7 +1495,9 @@
         headings = [...new Set([...headings, ...got.headings])];
         await lib.setMeta("headings", headings);
         const had = new Set(encounters.map((x) => x.id));
-        encounters = encounters.concat(got.encounters.filter((x) => !had.has(x.id)));
+        const fresh = got.encounters.filter((x) => !had.has(x.id));
+        encountersIn += fresh.length;
+        encounters = encounters.concat(fresh);
         await lib.setMeta("encounters", encounters);
         renderEncounters();
         continue;
@@ -1462,6 +1513,7 @@
       const bits = [];
       if (added) bits.push(`${added} added to your entries`);
       if (merged) bits.push(`${merged} restored from a backup`);
+      if (encountersIn) bits.push(`${encountersIn} saved encounter${encountersIn === 1 ? "" : "s"} added (see the Encounter tab)`);
       if (failed.length) bits.push(`couldn't read ${failed.join(", ")}`);
       libNote(bits.join("; ") + (bits.length ? "." : "Nothing to import."));
     }
@@ -1505,7 +1557,7 @@
   }
 
   async function renameHeading(from) {
-    const to = (prompt(`Rename ${from} to:`, from) || "").trim();
+    const to = ((await ask(`Rename ${from} to:`, { value: from, ok: "Rename" })) || "").trim();
     if (!to || to === from) return;
     if (headings.includes(to)) { libNote(`There's already a heading called ${to}.`); return; }
     for (const e of library.renameTag(mine, bundledTags, from, to)) await lib.put(e);
@@ -1517,7 +1569,7 @@
   }
 
   async function deleteHeading(name) {
-    if (!confirm(`Delete the heading ${name}? Everything under it stays in the Catalog.`)) return;
+    if (!(await ask(`Delete the heading ${name}? Everything under it stays in the Catalog.`, { ok: "Delete heading", danger: true }))) return;
     for (const e of library.dropTag(mine, bundledTags, name)) await lib.put(e);
     headings = headings.filter((h) => h !== name);
     await lib.setMeta("headings", headings);
@@ -2012,7 +2064,7 @@
   async function saveEncounter() {
     const members = roster.filter((r) => r.state);
     if (!members.length) { libNote(""); encNote("Add someone to the encounter first."); return; }
-    const name = (prompt("Name this encounter:", `Encounter ${encounters.length + 1}`) || "").trim();
+    const name = ((await ask("Name this encounter:", { value: `Encounter ${encounters.length + 1}`, ok: "Save" })) || "").trim();
     if (!name) return;
     const saved = {
       id: `enc:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
@@ -2048,14 +2100,14 @@
 
   async function deleteEncounter(id) {
     const saved = encounters.find((x) => x.id === id);
-    if (!saved || !confirm(`Delete the saved encounter ${saved.name}?`)) return;
+    if (!saved || !(await ask(`Delete the saved encounter ${saved.name}?`, { ok: "Delete", danger: true }))) return;
     encounters = encounters.filter((x) => x.id !== id);
     await lib.setMeta("encounters", encounters);
     renderEncounters();
   }
 
-  function clearEncounter() {
-    if (!roster.length || !confirm("Take everyone out of this encounter? Your Catalog and saved encounters stay.")) return;
+  async function clearEncounter() {
+    if (!roster.length || !(await ask("Take everyone out of this encounter? Your Catalog and saved encounters stay.", { ok: "Clear encounter", danger: true }))) return;
     roster = [];
     combat = engine.createCombat();
     saveRoster();
