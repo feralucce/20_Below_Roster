@@ -1,6 +1,6 @@
 # 20 Below Roster
 
-An [Owlbear Rodeo](https://www.owlbear.rodeo/) extension for GMs running [20 Below](https://20belowrpg.com/). Load player and NPC character JSONs, look them up read-only, and run a fight from the same panel - Initiative, Action Brackets, turn order, and the Health/Poise/Sanity/Ki tracks.
+An [Owlbear Rodeo](https://www.owlbear.rodeo/) extension for GMs running [20 Below](https://20belowrpg.com/). A bestiary and combat tracker in one panel: every creature from the free bestiary packs, your own characters, NPCs and creatures, saved encounters, a Roll dice window on every line, and the Health, Poise, Sanity, Ki and Exhausted tracks. It also hears the players' Character Sheets: their Initiative rolls fill in, and you can give them rests and Fate Tokens.
 
 ## Installing
 
