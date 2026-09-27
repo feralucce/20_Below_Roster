@@ -71,7 +71,7 @@
   #addFile, #addFolder { display: none; }
 
   .drop-zone.dragging {
-    outline: 2px dashed var(--accent);
+    outline: 2px dashed var(--ok);
     outline-offset: 3px;
     border-radius: 6px;
   }
@@ -136,21 +136,25 @@
   .ri-broken { color: var(--danger); font-size: 0.68rem; }
   .list-empty { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0.3rem 0; }
 
+  /* An entry opens in a window over the tracker, where you are, rather
+     than at the bottom of the page. */
+  .detail-overlay {
+    position: fixed; inset: 0; z-index: 20; overflow-y: auto;
+    background: rgba(2, 8, 12, 0.72); padding: 0.6rem;
+  }
+  .detail-overlay .detail-wrap { max-width: 640px; margin: 0 auto; border-color: var(--accent); }
   .detail-wrap {
     background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: 6px;
     padding: 0.6rem 0.65rem;
   }
-  .detail-back {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-size: 0.7rem;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
-    margin-bottom: 0.5rem;
+  /* Close sits at the top right and stays there while the window scrolls. */
+  .detail-top {
+    position: sticky; top: -0.6rem; z-index: 2;
+    display: flex; justify-content: flex-end;
+    margin: -0.6rem -0.65rem 0.2rem; padding: 0.45rem 0.65rem 0.35rem;
+    background: var(--panel); border-radius: 6px 6px 0 0;
   }
 
   .char-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
@@ -270,14 +274,10 @@
   }
   .role-PC { color: var(--ok); border-color: var(--ok); }
   .role-Ally { color: var(--accent); border-color: var(--accent); }
-  .role-NPC { color: var(--danger); border-color: var(--danger); }
+  .role-NPC { color: var(--text-dim); border-color: var(--text-faint); }
 
   .ri-combat {
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.3rem;
     margin-top: 0.4rem;
     padding-top: 0.4rem;
     border-top: 1px solid var(--panel-2);
@@ -294,29 +294,47 @@
   }
   .mini-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); }
 
+  .ri-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; width: 100%; }
+  /* The tracks in even columns: name (and any status) over the - value +. */
+  .track-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+    gap: 0.3rem; width: 100%; margin-top: 0.35rem;
+  }
   .track {
     display: flex;
-    align-items: center;
-    gap: 0.15rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.05rem;
     background: var(--panel-2);
     border: 1px solid var(--panel-border);
     border-radius: 4px;
-    padding: 0.1rem 0.2rem;
+    padding: 0.15rem 0.3rem 0.1rem;
   }
-  .track .tk { font-size: 0.55rem; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.04em; }
-  .track .tv { font-size: 0.75rem; font-weight: 700; min-width: 2.2rem; text-align: center; }
+  .track .tk { font-size: 0.55rem; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.04em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tstat { color: var(--danger); font-weight: 700; margin-left: 0.2rem; }
+  .tctl { display: flex; align-items: center; justify-content: space-between; }
+  .track .tv { font-size: 0.8rem; font-weight: 700; text-align: center; flex: 1; }
   .track button {
     background: none;
     border: none;
     color: var(--text-faint);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     line-height: 1;
-    padding: 0 0.15rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
   }
+  .track button:hover { background: var(--panel); }
   .track button:hover { color: var(--text); }
   .track.hurt .tv { color: var(--gold); }
   .track.down .tv { color: var(--danger); }
+  .exh-note { font-size: 0.66rem; color: #e0685c; margin-top: 0.3rem; width: 100%; }
+  .armour-grid { grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); }
+  .track .armour-name { text-transform: none; letter-spacing: 0; font-size: 0.66rem; color: var(--text-dim); }
+  .armour-hard { color: var(--text-faint); font-size: 0.6rem; }
+  .roster-item.is-down { opacity: 0.55; }
+  .roster-item.is-down .ri-name { text-decoration: line-through; }
   .floor-note {
     font-size: 0.58rem;
     text-transform: uppercase;
@@ -345,35 +363,344 @@
     margin-bottom: 0.5rem;
     line-height: 1.35;
   }
+  /* Catalog and Encounter, the tracker's two views. */
+  .views { display: flex; gap: 0.3rem; margin: 0 0 0.7rem; }
+  .view-btn {
+    flex: 1; padding: 0.4rem; border-radius: 6px; font: inherit; font-size: 0.8rem; cursor: pointer;
+    background: var(--panel); color: var(--text-dim); border: 1px solid var(--panel-border);
+  }
+  .view-btn.on { color: var(--text); border-color: var(--accent); background: var(--accent-dim, #1c3548); }
+  .lib-bar { display: flex; gap: 0.4rem; margin-bottom: 0.45rem; }
+  .lib-bar input { flex: 1; min-width: 0; }
+  .lib-bar input, .lib-bar select, .tag-input {
+    background: #03070a; color: var(--text); border: 1px solid var(--panel-border);
+    border-radius: 5px; padding: 0.3rem 0.45rem; font: inherit; font-size: 0.78rem;
+  }
+  .lib-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
+  .lib-tag {
+    font: inherit; font-size: 0.66rem; padding: 0.15rem 0.45rem; border-radius: 999px; cursor: pointer;
+    background: var(--panel); color: var(--text-dim); border: 1px solid var(--panel-border);
+  }
+  .lib-tag.own { border-style: dashed; }
+  .lib-tag.on { color: var(--text); border-color: var(--accent); background: var(--accent-dim, #1c3548); }
+  .lib-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-bottom: 0.35rem; }
+  .lib-actions input[type=file] { display: none; }
+  .lib-own {
+    background: color-mix(in srgb, var(--ok) 14%, var(--panel-2));
+    border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);
+    border-radius: 6px; padding: 0.5rem 0.6rem; margin-bottom: 0.6rem;
+  }
+  .lib-own-title { font-size: 0.72rem; font-weight: 600; color: var(--ok); margin-bottom: 0.4rem; }
+  .own-btn {
+    display: inline-block; font: inherit; font-size: 0.74rem; cursor: pointer; margin: 0;
+    padding: 0.3rem 0.7rem; border-radius: 5px; text-transform: none; letter-spacing: 0;
+    background: transparent; color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 70%, transparent);
+  }
+  .own-btn:hover { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--text); }
+  .lib-own-note { font-size: 0.66rem; color: var(--text-dim); margin-top: 0.4rem; line-height: 1.4; }
+  .lib-own-note a { color: var(--ok); }
+  .lib-own-result { font-size: 0.72rem; color: var(--text); margin-top: 0.35rem; }
+  .hint { font-size: 0.7rem; color: var(--text-faint); align-self: center; }
+  .lib-group { margin-bottom: 0.3rem; }
+  .lib-group.depth-1 { margin-left: 0.8rem; }
+  .lib-group-head {
+    display: flex; align-items: center; gap: 0.4rem; width: 100%; text-align: left; cursor: pointer;
+    background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px;
+    padding: 0.4rem 0.6rem; font: inherit; font-size: 0.82rem; font-weight: 600;
+  }
+  .depth-1 > .lib-group-head { font-size: 0.76rem; font-weight: 500; color: var(--text-dim); background: var(--panel-2); }
+  .lib-group-head.open { border-color: var(--accent); }
+  .lib-group-count { margin-left: auto; color: var(--text-faint); font-weight: 400; font-size: 0.72rem; }
+  .caret { width: 0.8rem; color: var(--accent); }
+  .lib-rows { margin: 0.3rem 0 0.45rem 0.8rem; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 6px; }
+  .lib-rows > .lib-item { background: none; border: none; border-radius: 0; margin: 0; }
+  .lib-rows > .lib-item + .lib-item { border-top: 1px solid var(--panel-border); }
+  .enc-saved { background: var(--panel-2); border: 1px solid var(--panel-border); border-radius: 6px; padding: 0.45rem 0.55rem; margin-bottom: 0.6rem; }
+  .enc-saved-head { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+  .enc-saved-title { font-size: 0.74rem; font-weight: 600; color: var(--gold); margin-right: auto; }
+  .enc-row { display: flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0; border-top: 1px solid var(--panel-border); font-size: 0.78rem; margin-top: 0.3rem; }
+  .enc-row-name { font-weight: 600; margin-right: auto; }
+  .enc-row-who { color: var(--text-dim); font-size: 0.68rem; display: block; font-weight: 400; }
+  .party-list { font-size: 0.74rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.45; }
+  .party-list strong { color: var(--text); }
+  .party-controls { margin-top: 0.45rem; }
+  .party-to { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--text-dim);
+    text-transform: none; letter-spacing: 0; margin: 0 0 0.35rem; }
+  .party-to select { flex: 1; min-width: 0; font: inherit; font-size: 0.76rem; background: #03070a; color: var(--text);
+    border: 1px solid var(--panel-border); border-radius: 4px; padding: 0.2rem 0.35rem; }
+  .party-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
+  .party-note { font-size: 0.7rem; margin-top: 0.35rem; }
+  .party-note div { padding: 0.12rem 0; }
+  .party-note .ok { color: var(--ok); }
+  .party-note .bad { color: var(--danger); }
+  .heading-new { display: flex; gap: 0.35rem; margin: 0 0 0.45rem; }
+  .heading-new .tag-input { flex: 1; min-width: 0; }
+  .lib-group-head.is-heading { border-color: var(--gold); }
+  .lib-group-head.is-heading .caret { color: var(--gold); }
+  .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.15rem 0.8rem; font-size: 0.74rem; }
+  .sub-row { display: flex; justify-content: space-between; color: var(--text-dim); border-bottom: 1px solid var(--panel-border); padding: 0.1rem 0; }
+  .sub-row strong { color: var(--text); }
+  .vital-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.76rem; }
+  .vital-name { width: 3.6rem; font-weight: 700; }
+  .pips { display: flex; flex-wrap: wrap; gap: 2px; flex: 1; }
+  .pip { width: 11px; height: 11px; border: 1.5px solid var(--c); border-radius: 3px; opacity: 0.5; }
+  .pip.on { background: var(--c); opacity: 1; }
+  .vital-count { color: var(--text); font-weight: 700; min-width: 3rem; text-align: right; }
+  .attack-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+  .attack-table th { text-align: left; color: var(--text-faint); font-weight: 600; padding: 0.15rem 0.4rem 0.15rem 0; font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .attack-table td { border-top: 1px solid var(--panel-border); padding: 0.25rem 0.4rem 0.25rem 0; vertical-align: top; color: var(--text-dim); }
+  .attack-table td strong { color: var(--text); }
+  .attack-more { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.15rem; line-height: 1.4; }
+  .trait { background: var(--panel-2); border: 1px solid var(--panel-border); border-radius: 5px; padding: 0.35rem 0.5rem; margin-bottom: 0.3rem; }
+  .trait-name { font-weight: 700; font-size: 0.78rem; color: var(--text); }
+  .trait-text { font-size: 0.74rem; color: var(--text-dim); line-height: 1.45; }
+  /* The Roll dice window, dressed from the Creator's roller. */
+  .public-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem; border-bottom: 1px solid var(--panel-border); }
+  .roller-shell h3 { font-family: Georgia, serif; color: var(--gold); margin: 0 0 0.5rem; font-size: 1.05rem; }
+  .roller-shell h4 { margin: 0.6rem 0 0.3rem; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+  .roller-gift-check + .roller-gift-check { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px solid var(--panel-border); }
+  .roller-howto { color: var(--text-dim); font-size: 0.74rem; margin: 0 0 0.45rem; }
+  .roller-tier-note { color: #e0a85c; font-size: 0.74rem; margin: 0.25rem 0; }
+  .roller-tier-note:empty { display: none; }
+  .roller-exhausted { color: #e0685c; }
+  .roller-row { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; margin: 0.25rem 0;
+    text-transform: none; letter-spacing: 0; color: var(--text); }
+  .roller-result { margin-top: 0.45rem; font-size: 0.8rem; }
+  .roller-result:empty { display: none; }
+  .roller-result p, .roller-shell p { margin: 0.2rem 0; }
+  .roll-btn { background: var(--accent-dim); color: var(--text); border: 1px solid var(--accent); border-radius: 999px;
+    padding: 0.3rem 0.8rem; font: inherit; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; cursor: pointer; margin: 0.25rem 0.25rem 0.25rem 0; }
+  .roll-btn:hover { background: var(--accent); }
+  .status-ok { color: var(--ok); }
+  .status-bad { color: var(--danger); }
+  .quick-fields { display: flex; flex-wrap: wrap; gap: 0.4rem 0.7rem; margin: 0 0 0.35rem; }
+  .quick-field { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.66rem; color: var(--text-dim);
+    text-transform: none; letter-spacing: 0; margin: 0; }
+  .quick-field select, .roller-shell select { background: #03070a; color: var(--text); border: 1px solid var(--panel-border);
+    border-radius: 4px; font: inherit; font-size: 0.76rem; padding: 0.15rem 0.3rem; }
+  .quick-boxes { display: flex; gap: 1rem; }
+  .quick-table, .menu-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; margin: 0.3rem 0; }
+  .quick-table th, .quick-table td, .menu-table th, .menu-table td { text-align: left; padding: 0.2rem 0.45rem 0.2rem 0; }
+  .quick-table td, .menu-table td { border-top: 1px solid var(--panel-border); }
+  .quick-die-through { color: var(--ok); font-weight: 600; }
+  .quick-die-soaked { color: var(--danger); }
+  .log-row { padding: 0.25rem 0; border-bottom: 1px solid var(--panel-border); font-size: 0.74rem; }
+  .log-row.ok .log-head { color: var(--ok); }
+  .log-row.bad .log-head { color: var(--danger); }
+  .secret-mark { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold);
+    border: 1px solid var(--gold); border-radius: 999px; padding: 0 0.35rem; }
+  .el-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 0.3rem; }
+  .el-card { border: 1px solid var(--c); border-radius: 5px; padding: 0.25rem 0.35rem; background: var(--panel-2); }
+  .el-head { display: flex; justify-content: space-between; color: var(--c); font-size: 0.74rem; font-weight: 700; }
+  .el-head strong { color: var(--text); font-size: 1rem; }
+  .el-card .sub-row { font-size: 0.66rem; }
+  .pool-line { font-size: 0.74rem; color: var(--text-dim); margin-top: 0.3rem; }
+  .pool-line strong { color: var(--text); }
+  .sheet-row { display: flex; justify-content: space-between; gap: 0.6rem; font-size: 0.76rem; padding: 0.18rem 0;
+    border-bottom: 1px solid var(--panel-border); color: var(--text); }
+  .sheet-row-v { color: var(--text-dim); text-align: right; }
+  .el-tag { font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; margin-left: 0.3rem; }
+  .two-col { columns: 2; column-gap: 1.1rem; }
+  .two-col .sheet-row { break-inside: avoid; }
+  @media (max-width: 420px) { .two-col { columns: 1; } }
+  .gear-list { margin: 0; padding-left: 1.1rem; font-size: 0.76rem; color: var(--text-dim); }
+  .gift-info-list { padding-left: 1.1rem; }
+  .gift-info-text { font-size: 0.76rem; color: var(--text-dim); }
+  .animal-label { margin: 0.55rem 0 0 0.9rem; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); }
+  .heading-tools { display: flex; gap: 0.3rem; justify-content: flex-end; margin: 0.3rem 0; }
+  .heading-empty { margin: 0.2rem 0 0.4rem 0.8rem; }
+  .tag-picker { margin-top: 0.45rem; padding: 0.45rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--panel-2); }
+  .tag-picker-list { display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; margin-bottom: 0.4rem; font-size: 0.76rem; }
+  .tag-picker-list label { display: flex; align-items: center; gap: 0.25rem; text-transform: none; letter-spacing: 0; font-size: 0.76rem; color: var(--text); margin: 0; }
+  .tag-picker-new { display: flex; gap: 0.3rem; }
+  .tag-picker-new .tag-input { flex: 1; min-width: 0; }
+  .lib-tags-gap { flex-basis: 100%; height: 0; }
+  .lib-count { font-size: 0.68rem; color: var(--text-faint); margin: 0.4rem 0 0.3rem; }
+  .lib-item {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 6px;
+    padding: 0.45rem 0.55rem; margin-bottom: 0.35rem;
+  }
+  .lib-head { display: flex; align-items: center; gap: 0.45rem; }
+  .lib-name { font-weight: 700; font-size: 0.86rem; cursor: pointer; flex: 1; min-width: 0; }
+  .lib-name:hover { color: var(--accent); }
+  .lib-kind { font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+  .lib-sub { font-size: 0.7rem; color: var(--text-dim); margin: 0.15rem 0 0.25rem; }
+  .lib-item-tags { display: flex; flex-wrap: wrap; gap: 0.2rem; align-items: center; }
+  .chip { font-size: 0.6rem; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--panel-border); color: var(--text-faint); }
+  .chip.own { color: var(--text-dim); border-style: dashed; }
+  .chip button { background: none; border: none; color: inherit; cursor: pointer; padding: 0 0 0 0.2rem; font: inherit; }
+  .lib-buttons { display: flex; gap: 0.3rem; margin-left: auto; }
+  .lib-more { text-align: center; margin: 0.5rem 0; }
+  .creature-stats { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+  .creature-attack { font-size: 0.78rem; margin: 0.25rem 0; line-height: 1.4; }
   .site-back { margin: 0 0 1rem; font-size: 0.85rem; }
   .site-back a { color: var(--text-dim, #8fadbe); text-decoration: none; }
   .site-back a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+<script src="./lib/marked.min.js"></script>
 
 <h1><img src="https://feralucce.github.io/20_Below_Roster/icon.svg" alt="" width="20" height="20" /> 20 Below Battle Tracker</h1>
 <p class="site-back"><a href="https://20belowrpg.com/home.html" target="_blank" rel="noopener">&larr; 20 Below</a></p>
 
-<div id="dropZone" class="drop-zone">
-  <label class="file-btn" for="addFile">Add character JSON(s)&hellip;</label>
-  <input type="file" id="addFile" accept="application/json,.json,image/*" multiple />
-  <label class="file-btn secondary" for="addFolder">&hellip;or pick a whole folder</label>
-  <input type="file" id="addFolder" webkitdirectory directory multiple />
+<nav class="views">
+  <button type="button" class="view-btn on" id="viewLibrary">Catalog</button>
+  <button type="button" class="view-btn" id="viewEncounter">Encounter <span id="encCount"></span></button>
+</nav>
+
+<!-- The Catalog: the bundled bestiary and the GM's own entries. -->
+<section id="libraryView">
+  <!-- Bringing your own things in comes first: it is how a GM starts. -->
+  <div class="lib-own">
+    <div class="lib-own-title">Your own characters, NPCs and creatures</div>
+    <div class="lib-actions">
+      <label class="own-btn" for="libFiles">Import files</label>
+      <input type="file" id="libFiles" accept="application/json,.json,image/*" multiple />
+      <label class="own-btn" for="libFolder">Import a folder</label>
+      <input type="file" id="libFolder" webkitdirectory directory multiple />
+      <button type="button" class="own-btn" id="libExport">Export</button>
+    </div>
+    <div class="lib-own-note">Characters and NPCs come from the <a href="https://20belowrpg.com/app/" target="_blank">Character Creator</a>. A folder's name becomes a tag on what came out of it. Export takes your entries, headings and saved encounters to another machine, or to the tracker in Owlbear: import the file there.</div>
+    <div id="libNote" class="lib-own-result" style="display:none"></div>
+  </div>
+  <div class="lib-bar">
+    <input type="search" id="libSearch" placeholder="Search names, tags and descriptions" autocomplete="off" />
+    <select id="libSource" aria-label="Show">
+      <option value="all">Everything</option>
+      <option value="bestiary">Bestiary</option>
+      <option value="mine">My entries</option>
+    </select>
+  </div>
+  <div id="libTags" class="lib-tags"></div>
+  <div id="libCount" class="lib-count"></div>
+  <div id="libList" class="lib-list"></div>
+</section>
+
+<!-- The encounter: who is in this fight, and the fight itself. -->
+<section id="encounterView" style="display:none">
+  <!-- Adding comes first, as in the Catalog; then the fight; then the
+       saved encounters and the players' sheets. -->
+  <div id="dropZone" class="lib-own drop-zone">
+    <div class="lib-own-title">Add to this encounter</div>
+    <div class="lib-actions">
+      <label class="own-btn" for="addFile">Import files</label>
+      <label class="own-btn" for="addFolder">Import a folder</label>
+      <input type="file" id="addFile" accept="application/json,.json,image/*" multiple />
+      <input type="file" id="addFolder" webkitdirectory directory multiple />
+    </div>
+    <div class="lib-own-note">Character files from the Character Creator, or drop them here. Or add from the Catalog. Anything added here is kept in your entries too.</div>
+  </div>
+
+  <div id="obrNote" class="obr-note" style="display:none"></div>
+
+  <div id="combatBar" class="combat-bar"></div>
+
+  <div id="rosterList" class="roster-list"><div class="list-empty">Nobody in this encounter yet. Add them from the Catalog.</div></div>
+
+  <!-- Premade fights: save this one, or add a saved one to it. -->
+  <div class="enc-saved">
+    <div class="enc-saved-head">
+      <span class="enc-saved-title">Saved encounters</span>
+      <button type="button" class="btn" id="encSave">Save this encounter</button>
+      <button type="button" class="btn danger" id="encClear">Clear encounter</button>
+    </div>
+    <div id="encList"></div>
+  </div>
+
+  <!-- The players' Character Sheets in this room: rests and Fate Tokens go
+       to them from here, and their Initiative rolls land in the boxes above. -->
+  <div class="enc-saved" id="partyBox">
+    <div class="enc-saved-head"><span class="enc-saved-title">Players' sheets</span></div>
+    <div id="partyList" class="party-list"></div>
+    <div id="partyControls" class="party-controls" style="display:none">
+      <label class="party-to">Send to <select id="grantTo"></select></label>
+      <div class="party-buttons">
+        <button type="button" class="btn" id="grantShort">Short Rest</button>
+        <button type="button" class="btn" id="grantFull">Full Night's Rest</button>
+        <button type="button" class="btn" id="grantFate">Give a Fate Token</button>
+      </div>
+    </div>
+    <div id="partyNote" class="party-note"></div>
+  </div>
+</section>
+
+<div id="detail" style="display:none" class="detail-overlay">
+  <div class="detail-wrap">
+    <div class="detail-top"><button type="button" class="btn" id="backBtn">Close</button></div>
+    <div id="charView"></div>
+  </div>
 </div>
-<div class="empty-note" style="margin-top:-0.3rem;margin-bottom:0.6rem">Export characters from the <a href="https://20belowrpg.com/app/" target="_blank" style="color:var(--accent)">20 Below character creator</a> (Sheet step &rarr; Save/Export) - players and NPCs both work. Read-only, no editing here.</div>
 
-<div id="obrNote" class="obr-note" style="display:none"></div>
-
-<div id="combatBar" class="combat-bar"></div>
-
-<div id="rosterList" class="roster-list"><div class="list-empty">No characters loaded yet.</div></div>
-
-<div id="detail" style="display:none" class="detail-wrap">
-  <button class="detail-back" id="backBtn">&larr; Back to roster</button>
-  <div id="charView"></div>
-</div>
-
+<!-- module-stamps: generated by tools/stamp-app-modules.py, do not edit -->
+<script type="importmap">
+{
+ "imports": {
+  "./lib/combat/encounter.js": "./lib/combat/encounter.js?v=0ab8668b78",
+  "./lib/combat/library.js": "./lib/combat/library.js?v=104fee9130",
+  "./lib/combat/model.js": "./lib/combat/model.js?v=f2fb558219",
+  "./lib/describe-spec.js": "./lib/describe-spec.js?v=76314f119c",
+  "./lib/desktop-storage.js": "./lib/desktop-storage.js?v=367151fc27",
+  "./lib/export/toJson.js": "./lib/export/toJson.js?v=b75d7e429d",
+  "./lib/file-actions.js": "./lib/file-actions.js?v=4193e627d0",
+  "./lib/file.js": "./lib/file.js?v=96a7618ac6",
+  "./lib/main.js": "./lib/main.js?v=533ad80250",
+  "./lib/media.js": "./lib/media.js?v=c47a8a8dba",
+  "./lib/parse/attributes.js": "./lib/parse/attributes.js?v=fee50b0e63",
+  "./lib/parse/boons.js": "./lib/parse/boons.js?v=af6554631f",
+  "./lib/parse/costs.js": "./lib/parse/costs.js?v=207340b2ae",
+  "./lib/parse/creatures.js": "./lib/parse/creatures.js?v=cb4d36b981",
+  "./lib/parse/descriptors.js": "./lib/parse/descriptors.js?v=99ca06a59e",
+  "./lib/parse/difficulty.js": "./lib/parse/difficulty.js?v=7f08cfa931",
+  "./lib/parse/flaws.js": "./lib/parse/flaws.js?v=0452c4104a",
+  "./lib/parse/gifts.js": "./lib/parse/gifts.js?v=3f346d86fb",
+  "./lib/parse/markdown.js": "./lib/parse/markdown.js?v=04ac2af5e4",
+  "./lib/parse/nature.js": "./lib/parse/nature.js?v=b317a186c2",
+  "./lib/parse/resources.js": "./lib/parse/resources.js?v=c042c22d3a",
+  "./lib/parse/skills.js": "./lib/parse/skills.js?v=01d2471a98",
+  "./lib/parse/weapons.js": "./lib/parse/weapons.js?v=5fa46f6ce7",
+  "./lib/roller/core.js": "./lib/roller/core.js?v=597b3aad3b",
+  "./lib/roller/damage.js": "./lib/roller/damage.js?v=5ad5b6f00b",
+  "./lib/roller/giftCheck.js": "./lib/roller/giftCheck.js?v=e8d50c3533",
+  "./lib/roller/resourceCheck.js": "./lib/roller/resourceCheck.js?v=d03860c0ac",
+  "./lib/roller/wealthCheck.js": "./lib/roller/wealthCheck.js?v=c5927521a6",
+  "./lib/rules-data.js": "./lib/rules-data.js?v=b7cc5907a7",
+  "./lib/sheet/paged-sheet.js": "./lib/sheet/paged-sheet.js?v=0db703037e",
+  "./lib/sheet/panels.js": "./lib/sheet/panels.js?v=bd3748612e",
+  "./lib/sheet/sheet-model.js": "./lib/sheet/sheet-model.js?v=e9623281f1",
+  "./lib/sheet/web-sheet.js": "./lib/sheet/web-sheet.js?v=a9efa36156",
+  "./lib/state.js": "./lib/state.js?v=1c8959f7b3",
+  "./lib/steps/00-bonus.js": "./lib/steps/00-bonus.js?v=557febbc41",
+  "./lib/steps/01-identity.js": "./lib/steps/01-identity.js?v=e80c687745",
+  "./lib/steps/02-nature.js": "./lib/steps/02-nature.js?v=d123a87609",
+  "./lib/steps/03-attributes.js": "./lib/steps/03-attributes.js?v=de776e637d",
+  "./lib/steps/04-substats.js": "./lib/steps/04-substats.js?v=ac776c95fc",
+  "./lib/steps/05-descriptors.js": "./lib/steps/05-descriptors.js?v=1cacc845f8",
+  "./lib/steps/06-skills.js": "./lib/steps/06-skills.js?v=eee2f339f0",
+  "./lib/steps/07-boons.js": "./lib/steps/07-boons.js?v=be171d91fa",
+  "./lib/steps/08-resources.js": "./lib/steps/08-resources.js?v=c8c71d0d7b",
+  "./lib/steps/09-gifts.js": "./lib/steps/09-gifts.js?v=737ac4e8a2",
+  "./lib/steps/10-gift-menus.js": "./lib/steps/10-gift-menus.js?v=a93a4e2134",
+  "./lib/steps/11-flaws.js": "./lib/steps/11-flaws.js?v=02edca9c8a",
+  "./lib/steps/12-discretionary.js": "./lib/steps/12-discretionary.js?v=f0409e42f3",
+  "./lib/steps/12a-equipment.js": "./lib/steps/12a-equipment.js?v=34f6edaae6",
+  "./lib/steps/13-sheet.js": "./lib/steps/13-sheet.js?v=d306f2726c",
+  "./lib/steps/add-item.js": "./lib/steps/add-item.js?v=3250ffab2e",
+  "./lib/steps/custom-gear.js": "./lib/steps/custom-gear.js?v=f26b7e0d98",
+  "./lib/steps/everyman-gear.js": "./lib/steps/everyman-gear.js?v=1dc0eae918",
+  "./lib/steps/gear-shop.js": "./lib/steps/gear-shop.js?v=c45c2a4515",
+  "./lib/steps/roller-panel.js": "./lib/steps/roller-panel.js?v=88dd774547",
+  "./lib/steps/tab-advancement.js": "./lib/steps/tab-advancement.js?v=b1562d324e",
+  "./lib/steps/tab-scars.js": "./lib/steps/tab-scars.js?v=a8dfaaba2a",
+  "./lib/sw.js": "./lib/sw.js?v=67556fbe92",
+  "./lib/ui.js": "./lib/ui.js?v=e8a17a0f32",
+  "./lib/web-storage.js": "./lib/web-storage.js?v=386dcc6f6f"
+ }
+}
+</script>
+<!-- /module-stamps -->
 <script type="module">
   const STORAGE_KEY = "twentybelow-roster.characters";
   const COMBAT_KEY = "twentybelow-roster.combat";
@@ -392,6 +719,10 @@
   // so all three can't drift on how a round actually runs.
   import * as engine from "./lib/combat/model.js";
   import * as media from "./lib/media.js";
+  import * as library from "./lib/combat/library.js";
+  import { creatureRollPanel, rollDicePanel, giftInfoPanel } from "./lib/sheet/panels.js";
+  import { splitGear, sheetContext, named, SKILL_ELEMENT_COLOURS } from "./lib/sheet/sheet-model.js";
+  import { skillTierName, boonNotes, flawNotes, giftNotes, adderLabels, optionWithChoice } from "./lib/state.js";
   const { ROLES, BRACKETS, computeFiguredCharacteristics } = engine;
 
   // ---- Owlbear bridge ----
@@ -411,6 +742,7 @@
       if (!OBR || !OBR.isAvailable) throw new Error("not in Owlbear");
       await new Promise((resolve) => OBR.onReady(resolve));
       obrReady = true;
+      listenToSheets();
       // A token deleted from the scene should not leave a dead link behind.
       OBR.scene.items.onChange((items) => {
         if (engine.pruneTokens(combat, items.map((i) => i.id))) {
@@ -420,6 +752,7 @@
       });
     } catch (e) {
       obrReady = false;
+      renderParty();
       const note = document.getElementById("obrNote");
       note.style.display = "";
       note.textContent =
@@ -739,9 +1072,10 @@
   // the image arrived in the same batch: multi-selected, picked as a folder,
   // or dropped together. All three end up here.
   async function addFiles(fileList) {
+    // Kept in the catalogue as well, so nobody has to import it twice.
+    if (lib) await importFiles(fileList, { quiet: true });
     const paired = await media.pairFiles(fileList);
     if (!paired.length) return;
-    let firstId = null;
     for (const p of paired) {
       const id = `c${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
       const entry = parseEntry(id, p.text, p.icon);
@@ -749,11 +1083,9 @@
         entry.icon = media.makePlaceholder(entry.state.name || "Unnamed", 128);
       }
       roster.push(entry);
-      if (entry.state && !firstId) firstId = id;
     }
     saveRoster();
     renderAll();
-    if (paired.length === 1 && firstId) selectCharacter(firstId);
   }
 
   function removeCharacter(id) {
@@ -774,14 +1106,1032 @@
     const entry = roster.find((r) => r.id === id);
     if (!entry || !entry.state) return;
     activeId = id;
-    renderCharacter(entry.state);
+    const e = combatEntry(entry);
+    const live = { health: e.currentHealth, poise: e.currentPoise, sanity: e.currentSanity, ki: e.currentKi };
+    if (entry.state.creature) renderCreature(entry.state.creature, entry.state.name, live);
+    else renderCharacterSheet(entry.state, { ...live, entry });
     document.getElementById("detail").style.display = "";
     renderList();
+  }
+
+  // A creature as the book prints it: what it is, its numbers, its attacks
+  // with their dice, and its Skills and Traits in the book's own words.
+  function inlineMd(text) {
+    return escapeHtml(text || "")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  }
+  // A creature laid out the way the character sheet is: who it is, its
+  // numbers, its Vitals, its attacks as a weapons table, its Skills, and
+  // each Trait as its own card the way a Gift is. In a fight, `live` is
+  // where its Vitals are now.
+  function renderCreature(c, shownName, live = null) {
+    const s = c.stats || {};
+    const box = (label, value, unit = "") => value == null ? ""
+      : `<div class="stat-chip"><div class="v">${value}${unit}</div><div class="k">${escapeHtml(label)}</div></div>`;
+    // Poise and Sanity count the way a character's do: 5 + Presence and
+    // 5 + Psyche, from the same numbers the fight uses. A Defense the book
+    // leaves off comes the same way (10 - Psyche, 10 - Presence), because a
+    // player talking it down needs one.
+    const f = computeFiguredCharacteristics(library.creatureState(c));
+    const numbers = [
+      box("Attack", s.Attack), box("Defense", s.Defense ?? f.Defense),
+      box("Social Def", s["Social Defense"] ?? f["Social Defense"]),
+      box("Mental Def", s["Mental Defense"] ?? f["Mental Defense"]),
+      box("Movement", s["Movement Rate"] ?? f["Movement Rate"], "m"), box("Soak", s.Soak),
+    ].join("");
+    const subs = ["Potence", "Initiative", "Psyche", "Ferocity", "Presence", "Stamina"]
+      .filter((k) => s[k] != null)
+      .map((k) => `<div class="sub-row"><span>${k}</span><strong>${s[k]}</strong></div>`).join("");
+
+    const vital = (label, cur, max, colour) => {
+      const now = cur ?? max;
+      const pips = Array.from({ length: Math.max(0, max) }, (_, i) =>
+        `<span class="pip${i < now ? " on" : ""}" style="--c:${colour}"></span>`).join("");
+      return `<div class="vital-row"><span class="vital-name" style="color:${colour}">${label}</span>
+        <span class="pips">${pips}</span><span class="vital-count">${now} / ${max}</span></div>`;
+    };
+    const vitals = vital("Health", live?.health, f["Health Levels"], "#6FBF73")
+      + vital("Poise", live?.poise, f.Poise, "#E0A85C")
+      + vital("Sanity", live?.sanity, f.Sanity, "#6FB8E0");
+
+    // Some cards carry more on the same line after the attack itself -
+    // the Vampire's Blood Drain - and it goes under the attack's name.
+    const beyond = (a) => a.text.split(/\.\s+(?=\*\*|[A-Z])/).slice(1).join(". ").trim();
+    const attacks = (c.attacks || []).map((a) => `<tr>
+        <td><strong>${escapeHtml(a.name)}</strong>${a.when ? `<div class="hint">${escapeHtml(a.when)}</div>` : ""}${
+          beyond(a) ? `<div class="attack-more">${inlineMd(beyond(a))}</div>` : ""}</td>
+        <td>${a.dice} ${a.dice === 1 ? "die" : "dice"}</td><td>${escapeHtml(a.range || "")}</td>
+        <td>${a.kind} vs ${a.wall}</td></tr>`).join("");
+
+    const skills = (c.skills || "").split(/,\s*/).filter(Boolean)
+      .map((k) => `<span class="tag">${inlineMd(k)}</span>`).join("");
+
+    // "**Relentless** - keeps attacking ... **Pack Hunter** - ..." becomes
+    // one card per Trait.
+    const traits = (c.traits || "").split(/(?=\*\*[^*]+\*\*\s*(?:[-–—:]|\(as ))/).map((t) => t.trim()).filter(Boolean).map((t) => {
+      const m = /^\*\*([^*]+)\*\*\s*(?:[-–—:]\s*)?([\s\S]*)$/.exec(t);
+      return m
+        ? `<div class="trait"><div class="trait-name">${escapeHtml(m[1])}</div><div class="trait-text">${inlineMd(m[2])}</div></div>`
+        : `<div class="trait"><div class="trait-text">${inlineMd(t)}</div></div>`;
+    }).join("");
+
+    const tags = (c.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+    const section = (title, body) => body ? `<div class="char-section"><div class="char-section-title">${title}</div>${body}</div>` : "";
+    document.getElementById("charView").innerHTML = `
+      <div class="char-header">
+        <div>
+          <div class="char-name">${escapeHtml(shownName || c.name)}</div>
+          <div class="tag-list" style="margin-top:0.3rem">${tags}</div>
+        </div>
+      </div>
+      ${c.description ? `<div class="item-line" style="line-height:1.5">${inlineMd(c.description)}</div>` : ""}
+      ${section("Numbers", `<div class="stat-grid">${numbers}</div>`)}
+      ${section("Sub-stats", subs ? `<div class="sub-grid">${subs}</div>` : "")}
+      ${section(live ? "Vitals now" : "Vitals", vitals)}
+      ${section("Attacks", attacks ? `<table class="attack-table"><tr><th>Attack</th><th>Dice</th><th>Range</th><th>Against</th></tr>${attacks}</table>` : "")}
+      ${section("Also", c.notes ? `<div class="item-line" style="line-height:1.5">${inlineMd(c.notes).replace(/\n/g, "<br>")}</div>` : "")}
+      ${section("Notable Skills", skills ? `<div class="tag-list">${skills}</div>` : "")}
+      ${section("Traits", traits)}
+    `;
+  }
+
+  // A character laid out the way their sheet is, and the way a creature's
+  // stat block now is: who they are, Elements, the figured numbers, their
+  // Vitals and pools, Skills, Boons, Flaws, Resources, Gifts, gear and
+  // notes. From the encounter, `live` holds where they stand in the fight;
+  // from the Catalog it is their file. Needs the Creator's rules; until
+  // they load, the plain list shows instead.
+  function renderCharacterSheet(state, live = null) {
+    if (!rulesData) { renderCharacter(state); return; }
+    let ctx;
+    try { ctx = sheetContext(state, rulesData); } catch (err) { renderCharacter(state); return; }
+    const { figured } = ctx;
+    const r = live?.entry || null;
+    const section = (title, body) => body ? `<div class="char-section"><div class="char-section-title">${title}</div>${body}</div>` : "";
+    const box = (label, value) => `<div class="stat-chip"><div class="v">${value}</div><div class="k">${escapeHtml(label)}</div></div>`;
+
+    const nature = state.nature?.picked || state.nature?.custom?.label || "";
+    const elements = (rulesData.attributes || []).map((a) => `
+      <div class="el-card" style="--c:${SKILL_ELEMENT_COLOURS[a.name] || "#8fadbe"}">
+        <div class="el-head"><span>${escapeHtml(a.name)}</span><strong>${state.attributes?.[a.name] ?? 0}</strong></div>
+        ${(a.splitsInto || []).map((sub) => `<div class="sub-row"><span>${escapeHtml(sub)}</span><strong>${state.subStats?.[sub] ?? 0}</strong></div>`).join("")}
+      </div>`).join("");
+
+    const numbers = [box("Defense", figured.Defense), box("Social Def", figured["Social Defense"]),
+      box("Mental Def", figured["Mental Defense"]), box("Movement", `${figured["Movement Rate"]}m`),
+      box("Carry", figured["Carrying Capacity"])].join("");
+
+    // Where they stand: the fight's numbers from the encounter, the file's
+    // from the Catalog.
+    const vital = (label, cur, max, colour) => {
+      const now = cur ?? max;
+      const pips = Array.from({ length: Math.max(0, max) }, (_, i) =>
+        `<span class="pip${i < now ? " on" : ""}" style="--c:${colour}"></span>`).join("");
+      return `<div class="vital-row"><span class="vital-name" style="color:${colour}">${label}</span>
+        <span class="pips">${pips}</span><span class="vital-count">${now} / ${max}</span></div>`;
+    };
+    const exhausted = r ? engine.exhaustedOf(combat, r) : (Number(state.exhausted) || 0);
+    const vitals = vital("Health", live ? live.health : state.currentHealth, figured["Health Levels"], "#6FBF73")
+      + vital("Poise", live ? live.poise : state.currentPoise, figured.Poise, "#E0A85C")
+      + vital("Sanity", live ? live.sanity : state.currentSanity, figured.Sanity, "#6FB8E0")
+      + `<div class="pool-line">Ki <strong>${live ? live.ki : (state.currentKi ?? figured.Ki)} / ${figured.Ki}</strong>
+         &middot; Fate Tokens <strong>${state.currentFateTokens ?? 0}</strong>
+         &middot; Exhausted <strong>${exhausted}</strong>${exhausted ? ` <span class="exh-note">${engine.EXHAUSTED_EFFECTS.slice(1, exhausted + 1).join("; ")}</span>` : ""}</div>`;
+
+    const row = (name, value) => `<div class="sheet-row"><span>${name}</span><span class="sheet-row-v">${value}</span></div>`;
+    const skills = ctx.skills.map((k) => row(
+      `${escapeHtml(k.name)}${k.joat ? "" : ` <span class="el-tag" style="color:${SKILL_ELEMENT_COLOURS[k.element] || "#8fadbe"}">${escapeHtml(k.retired ? "Retired" : (SKILL_ELEMENT_COLOURS[k.element] ? k.element : "Any"))}</span>`}`,
+      escapeHtml(k.retired ? "" : skillTierName(rulesData, k.tier)))).join("");
+    const boons = (state.boons || []).map((b) => row(escapeHtml(named(b.name, boonNotes(b))), `${b.points} pts`)).join("");
+    const flaws = ctx.flaws.map((f) => row(escapeHtml(named(f.name, flawNotes(f))), `Level ${f.level}`)).join("");
+    const resources = ctx.resources.map((x) => row(escapeHtml(x.name),
+      x.zeroed ? "spent" : x.now !== x.level ? `Level ${x.now} (of ${x.level})` : `Level ${x.level}`)).join("");
+
+    const gifts = ctx.gifts.map((g, i) => {
+      const adders = adderLabels(g.adders).map((l) => optionWithChoice(g, l, l.replace(/ ×\d+$/, "")));
+      const ki = ctx.giftKi(g);
+      return `<div class="trait">
+        <div class="trait-name">${escapeHtml(named(g.name, giftNotes(g)))} <span class="hint">Level ${g.level}${ki ? ` &middot; ${ki} Ki` : ""}</span></div>
+        <div class="trait-text">${escapeHtml(ctx.giftText(g))}</div>
+        ${adders.length ? `<div class="trait-text"><strong>Adders:</strong> ${escapeHtml(adders.join(", "))}</div>` : ""}
+        ${(g.limiters || []).length ? `<div class="trait-text"><strong>Limiters:</strong> ${escapeHtml(g.limiters.map((l) => optionWithChoice(g, l)).join(", "))}</div>` : ""}
+        <button type="button" class="btn" data-gift="${i}">What it does</button>
+      </div>`;
+    }).join("");
+
+    const weapons = ctx.weapons.map((w) => `<tr><td><strong>${escapeHtml(w.name)}</strong></td><td>${escapeHtml(w.damage)}</td>
+      <td>${escapeHtml(w.range || "")}</td><td>${escapeHtml(w.ammo || "")}</td></tr>`).join("");
+    const armour = ctx.armour.map((a) => {
+      const left = r ? engine.armourLeft(combat, r, a.key, a.health) : a.current;
+      return row(`${escapeHtml(a.name)} <span class="hint">Hardness ${escapeHtml(a.hardness)}</span>`,
+        a.health ? (left === 0 ? "broken" : `${left}/${a.health} HL`) : "");
+    }).join("");
+    const gear = ctx.gear.map((g) => `<li>${escapeHtml(g)}</li>`).join("");
+    const descriptors = (rulesData.attributes || []).flatMap((a) => a.splitsInto || [])
+      .map((sub) => [sub, (state.descriptors?.[sub] || []).filter(Boolean)])
+      .filter(([, list]) => list.length)
+      .map(([sub, list]) => row(escapeHtml(sub), escapeHtml(list.join(", ")))).join("");
+
+    const view = document.getElementById("charView");
+    view.innerHTML = `
+      <div class="char-header"><div>
+        <div class="char-name">${escapeHtml(state.name || "Unnamed")}</div>
+        <div class="char-concept">${escapeHtml(state.concept || "")}${nature ? ` &middot; ${escapeHtml(nature)}` : ""}</div>
+      </div></div>
+      ${section("Elements", `<div class="el-grid">${elements}</div>`)}
+      ${section("Numbers", `<div class="stat-grid">${numbers}</div>`)}
+      ${section(live ? "Vitals now" : "Vitals", vitals)}
+      ${section("Skills", skills ? `<div class="two-col">${skills}</div>` : "")}
+      ${section("Gifts", gifts)}
+      ${section("Weapons", weapons ? `<table class="attack-table"><tr><th>Weapon</th><th>Damage</th><th>Range</th><th>Ammo</th></tr>${weapons}</table>` : "")}
+      ${section("Armour", armour)}
+      ${section("Boons", boons)}
+      ${section("Flaws", flaws)}
+      ${section("Resources", resources)}
+      ${section("Equipment", gear ? `<ul class="gear-list">${gear}</ul>` : "")}
+      ${section("Descriptors", descriptors)}
+      ${section("Backstory", state.backstory ? `<div class="item-line" style="line-height:1.5">${escapeHtml(state.backstory).replace(/\n/g, "<br>")}</div>` : "")}
+      ${section("Notes", state.finishingNotes ? `<div class="item-line" style="line-height:1.5">${escapeHtml(state.finishingNotes).replace(/\n/g, "<br>")}</div>` : "")}
+    `;
+    // A Gift's whole explanation replaces the sheet in the window, with a
+    // way back to the sheet.
+    view.querySelectorAll("[data-gift]").forEach((b) => b.addEventListener("click", () => {
+      const g = ctx.gifts[Number(b.dataset.gift)];
+      view.innerHTML = "";
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "btn";
+      back.textContent = `Back to ${state.name || "the sheet"}`;
+      back.addEventListener("click", () => renderCharacterSheet(state, live));
+      view.appendChild(back);
+      giftInfoPanel(g, rulesData).forEach((n) => view.appendChild(n));
+    }));
+  }
+
+  // ---- The library ----
+  //
+  // The bundled bestiary (the rules' own creatures, tagged by pack) and the
+  // GM's catalogue (anything they import, kept in this browser), searched
+  // and filtered by tags, and added to the encounter from here.
+  let bestiary = [];
+  let mine = [];
+  let bundledTags = {};
+  let headings = []; // the GM's headings, in their order
+  let encounters = []; // the GM's saved encounters
+  let lib = null;
+  const filter = { query: "", tags: [], source: "all" };
+
+  // The extension ships the bestiary baked into bestiary.json. On the site
+  // and the desktop there is no such file, and the creatures are read live
+  // from the rules, so a stat fixed there is fixed here.
+  async function loadBestiary() {
+    try {
+      const res = await fetch("./bestiary.json", { cache: "no-cache" });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    const parse = await import("./lib/parse/creatures.js");
+    return parse.loadBestiary(async (file) => {
+      const res = await fetch(`../rules/${file}`, { cache: "no-cache" });
+      if (!res.ok) throw new Error(`${file}: ${res.status}`);
+      return res.text();
+    });
+  }
+
+  function libNote(text) {
+    const note = document.getElementById("libNote");
+    note.textContent = text || "";
+    note.style.display = text ? "" : "none";
+  }
+
+  function entryById(id) {
+    return bestiary.find((c) => c.id === id) || mine.find((e) => e.id === id);
+  }
+
+  async function saveBundledTags() {
+    await lib.setMeta("bundledTags", bundledTags);
+  }
+
+  async function addTag(id, tag) {
+    const t = tag.trim();
+    if (!t) return;
+    if (id.startsWith("bestiary:")) {
+      const creature = bestiary.find((c) => c.id === id);
+      if ((creature.tags || []).includes(t)) return;
+      bundledTags[id] = [...new Set([...(bundledTags[id] || []), t])];
+      await saveBundledTags();
+    } else {
+      const e = mine.find((x) => x.id === id);
+      e.tags = [...new Set([...(e.tags || []), t])];
+      await lib.put(e);
+    }
+    renderLibrary();
+  }
+
+  async function removeTag(id, tag) {
+    if (id.startsWith("bestiary:")) {
+      bundledTags[id] = (bundledTags[id] || []).filter((t) => t !== tag);
+      if (!bundledTags[id].length) delete bundledTags[id];
+      await saveBundledTags();
+    } else {
+      const e = mine.find((x) => x.id === id);
+      e.tags = (e.tags || []).filter((t) => t !== tag);
+      await lib.put(e);
+    }
+    filter.tags = filter.tags.filter((t) => library.allTags(bestiary, mine, bundledTags).own.includes(t)
+      || library.allTags(bestiary, mine, bundledTags).fixed.includes(t));
+    renderLibrary();
+  }
+
+  async function deleteMine(id) {
+    const e = mine.find((x) => x.id === id);
+    if (!e || !confirm(`Remove ${e.name} from your entries? Anything already in the encounter stays there.`)) return;
+    await lib.remove(id);
+    mine = mine.filter((x) => x.id !== id);
+    renderLibrary();
+  }
+
+  // Into the encounter: a character as it is, a creature through the
+  // adapter that lets the combat engine count its printed numbers. A
+  // second of the same thing is numbered, so the turn order can tell a
+  // pack of coyotes apart.
+  function addToEncounter(id) {
+    const entry = entryById(id);
+    if (!entry) return;
+    const taken = roster.filter((r) => r.state).map((r) => r.state.name || "");
+    const creature = entry.kind === "creature" || entry.id.startsWith("bestiary:");
+    const source = creature ? (entry.data || entry) : entry.data;
+    const name = library.uniqueName(source.name || "Unnamed", taken);
+    // The name before any number, so a saved "Wolf 2" loads as the next
+    // free Wolf rather than "Wolf 2 2".
+    const baseName = source.name || "Unnamed";
+    const state = { ...(creature ? library.creatureState(source, name) : { ...source, name }), baseName };
+    const rid = `c${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
+    const r = parseEntry(rid, JSON.stringify(state), entry.icon || media.makePlaceholder(name, 128));
+    roster.push(r);
+    saveRoster();
+    renderAll();
+    libNote(`${name} added to the encounter.`);
+    updateEncCount();
+  }
+
+  // What came in, from where: a folder's name becomes a tag on everything
+  // that came out of it, so "Session 3/cultist.json" arrives tagged.
+  function folderTag(file) {
+    const parts = (file.webkitRelativePath || "").split("/");
+    return parts.length > 1 ? parts[parts.length - 2] : null;
+  }
+
+  async function importFiles(fileList, { quiet = false } = {}) {
+    const files = [...fileList];
+    const folders = new Map(files.map((f) => [f.name, folderTag(f)]));
+    const paired = await media.pairFiles(files);
+    let added = 0;
+    let merged = 0;
+    const failed = [];
+    const newEntries = [];
+    for (const p of paired) {
+      let data;
+      try { data = JSON.parse(p.text); } catch (e) { failed.push(p.filename); continue; }
+      const kind = library.classify(data);
+      if (kind === "backup") {
+        const got = library.mergeBackup(data, bundledTags);
+        for (const e of got.entries) {
+          await lib.put(e);
+          mine = mine.filter((x) => x.id !== e.id).concat(e);
+          merged += 1;
+        }
+        bundledTags = got.bundledTags;
+        await saveBundledTags();
+        headings = [...new Set([...headings, ...got.headings])];
+        await lib.setMeta("headings", headings);
+        const had = new Set(encounters.map((x) => x.id));
+        encounters = encounters.concat(got.encounters.filter((x) => !had.has(x.id)));
+        await lib.setMeta("encounters", encounters);
+        renderEncounters();
+        continue;
+      }
+      if (!kind) { failed.push(p.filename); continue; }
+      const e = library.mineEntry(data, { icon: p.icon, tags: [folders.get(p.filename)] });
+      await lib.put(e);
+      mine.push(e);
+      newEntries.push(e);
+      added += 1;
+    }
+    if (!quiet) {
+      const bits = [];
+      if (added) bits.push(`${added} added to your entries`);
+      if (merged) bits.push(`${merged} restored from a backup`);
+      if (failed.length) bits.push(`couldn't read ${failed.join(", ")}`);
+      libNote(bits.join("; ") + (bits.length ? "." : "Nothing to import."));
+    }
+    renderLibrary();
+    return newEntries;
+  }
+
+  function exportCatalogue() {
+    const data = library.exportLibrary(mine, bundledTags, headings, encounters);
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `20-below-catalog-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  function summary(entry) {
+    if (entry.kind === "creature" || entry.id.startsWith("bestiary:")) {
+      const c = entry.data || entry;
+      const s = c.stats || {};
+      const atk = (c.attacks || [])[0];
+      return [`Attack ${s.Attack ?? "-"}`, `Defense ${s.Defense ?? "-"}`, `Soak ${s.Soak ?? "-"}`,
+        `Health Levels ${s["Health Levels"] ?? "-"}`,
+        atk ? `${atk.name} ${atk.dice} ${atk.dice === 1 ? "die" : "dice"}` : null].filter(Boolean).join(" · ");
+    }
+    return entry.data.concept || "Character";
+  }
+
+  // Headings: groups the GM makes - an enemy organization, a faction.
+  async function newHeading(name) {
+    const n = name.trim();
+    if (!n) return;
+    if (headings.includes(n)) { libNote(`There's already a heading called ${n}.`); return; }
+    headings = [...headings, n];
+    await lib.setMeta("headings", headings);
+    openGroups.add(`heading:${n}`);
+    libNote(`${n} made. Use Add to Heading on anything to put it there.`);
+    renderLibrary();
+  }
+
+  async function renameHeading(from) {
+    const to = (prompt(`Rename ${from} to:`, from) || "").trim();
+    if (!to || to === from) return;
+    if (headings.includes(to)) { libNote(`There's already a heading called ${to}.`); return; }
+    for (const e of library.renameTag(mine, bundledTags, from, to)) await lib.put(e);
+    headings = headings.map((h) => (h === from ? to : h));
+    await lib.setMeta("headings", headings);
+    await saveBundledTags();
+    if (openGroups.delete(`heading:${from}`)) openGroups.add(`heading:${to}`);
+    renderLibrary();
+  }
+
+  async function deleteHeading(name) {
+    if (!confirm(`Delete the heading ${name}? Everything under it stays in the Catalog.`)) return;
+    for (const e of library.dropTag(mine, bundledTags, name)) await lib.put(e);
+    headings = headings.filter((h) => h !== name);
+    await lib.setMeta("headings", headings);
+    await saveBundledTags();
+    renderLibrary();
+  }
+
+  // The Catalog opens as a handful of closed groups with counts, not two
+  // hundred rows: the GM's own entries, then each pack, the two animal
+  // packs split again by where the animals live. Searching, or picking one
+  // of the GM's tags, opens just the groups holding a match.
+  const openGroups = new Set();
+  let tagging = null; // the entry whose Add Tag picker is open
+  let placing = null; // the entry whose Add to Heading picker is open
+
+  // Each animal with its versions: Bobcat, Dire Bobcat, Giant Bobcat,
+  // Mutated Bobcat, then the next animal. The book prints a family's
+  // ordinary animals first and their versions after, so the order is
+  // rebuilt here from the name without its Dire, Giant or Mutated.
+  const VARIANT_ORDER = ["", "Dire", "Giant", "Mutated"];
+  const animalOf = (e) => e.name.replace(/^(Dire|Giant|Mutated)\s+/, "");
+  const variantOf = (e) => (/^(Dire|Giant|Mutated)\s/.exec(e.name) || [, ""])[1];
+  function byAnimal(entries) {
+    const first = new Map();
+    entries.forEach((e, i) => { if (!first.has(animalOf(e))) first.set(animalOf(e), i); });
+    return entries.slice().sort((a, b) =>
+      (first.get(animalOf(a)) - first.get(animalOf(b)))
+      || (VARIANT_ORDER.indexOf(variantOf(a)) - VARIANT_ORDER.indexOf(variantOf(b))));
+  }
+
+  function groupsOf(found) {
+    const groups = [];
+    const add = (key, title, entries, sub = null) => {
+      if (entries.length) groups.push({ key, title, entries, sub });
+    };
+    headings.forEach((h) => {
+      const under = found.filter((e) => [...library.tagsOf(e, bundledTags).own].includes(h));
+      // A heading shows even when it is empty, so a new one is there to
+      // be filled - unless a search is narrowing things down.
+      if (under.length || !(filter.query.trim() || filter.tags.length)) {
+        groups.push({ key: `heading:${h}`, title: h, entries: under, heading: h });
+      }
+    });
+    add("mine", headings.length ? "My entries, not under a heading" : "My entries",
+      found.filter((e) => !e.id.startsWith("bestiary:") && !(e.tags || []).some((t) => headings.includes(t))));
+    // The animals are one section, by where they live, each animal with its
+    // Dire, Giant and Mutated versions beside it: a GM looking for a
+    // bobcat finds every bobcat in one place. The book prints them in that
+    // order already, so the list keeps it.
+    const animals = found.filter((e) => e.id.startsWith("bestiary:") && ["Mundane Beasts", "Beast Variants"].includes(e.pack));
+    const placeOf = (e) => (e.tags || []).find((t) => !["Mundane Beasts", "Beast Variants", "Dire", "Giant", "Mutated"].includes(t));
+    const places = [...new Set(animals.map(placeOf).filter(Boolean))];
+    add("animals", "Animals", animals, places.length > 1
+      ? places.map((p) => ({ key: `animals/${p}`, title: p, entries: byAnimal(animals.filter((e) => placeOf(e) === p)), byAnimal: true }))
+      : null);
+    ["Cryptids", "Nightmare Creatures"].forEach((pack) => {
+      add(pack, pack, found.filter((e) => e.id.startsWith("bestiary:") && e.pack === pack));
+    });
+    return groups;
+  }
+
+  function entryRow(e) {
+    const yours = library.tagsOf(e, bundledTags).own.filter((t) => !headings.includes(t));
+    const isMine = !e.id.startsWith("bestiary:");
+    const div = document.createElement("div");
+    div.className = "lib-item";
+    div.innerHTML = `
+      <div class="lib-head">
+        ${e.icon ? `<img class="ri-icon" src="${e.icon}" alt="" />` : ""}
+        <span class="lib-name" data-open title="See everything on ${escapeHtml(e.name)}">${escapeHtml(e.name)}</span>
+        <div class="lib-buttons">
+          ${headings.length ? `<button type="button" class="btn" data-heading>Add to Heading</button>` : ""}
+          <button type="button" class="btn" data-tag>Add Tag</button>
+          <button type="button" class="btn primary" data-add title="Put ${escapeHtml(e.name)} in the encounter">Add to encounter</button>
+          ${isMine ? `<button type="button" class="btn danger" data-del>Remove</button>` : ""}
+        </div>
+      </div>
+      <div class="lib-sub">${escapeHtml(summary(e))}</div>
+      ${yours.length ? `<div class="lib-item-tags">${yours.map((t) =>
+        `<span class="chip own">${escapeHtml(t)}<button type="button" data-untag="${escapeHtml(t)}" title="Take this tag off">&times;</button></span>`).join("")}</div>` : ""}`;
+    div.querySelector("[data-open]").addEventListener("click", () => openEntry(e));
+    div.querySelector("[data-add]").addEventListener("click", () => addToEncounter(e.id));
+    div.querySelector("[data-del]")?.addEventListener("click", () => deleteMine(e.id));
+    div.querySelector("[data-tag]").addEventListener("click", () => {
+      tagging = tagging === e.id ? null : e.id;
+      placing = null;
+      renderLibrary();
+    });
+    div.querySelector("[data-heading]")?.addEventListener("click", () => {
+      placing = placing === e.id ? null : e.id;
+      tagging = null;
+      renderLibrary();
+    });
+    div.querySelectorAll("[data-untag]").forEach((b) => b.addEventListener("click", () => removeTag(e.id, b.dataset.untag)));
+    if (tagging === e.id) div.appendChild(tagPicker(e));
+    if (placing === e.id) div.appendChild(headingPicker(e));
+    return div;
+  }
+
+  // Add Tag: every tag the GM has made, to tick on or off, and a box for a
+  // new one. Pack tags are the book's and are not offered.
+  function tagPicker(e) {
+    const yours = library.tagsOf(e, bundledTags).own;
+    const every = library.allTags(bestiary, mine, bundledTags).own.filter((t) => !headings.includes(t));
+    const box = document.createElement("div");
+    box.className = "tag-picker";
+    box.innerHTML = `
+      ${every.length ? `<div class="tag-picker-list">${every.map((t) =>
+        `<label><input type="checkbox" data-t="${escapeHtml(t)}" ${yours.includes(t) ? "checked" : ""} /> ${escapeHtml(t)}</label>`).join("")}</div>`
+        : `<div class="hint">No tags yet. Make the first one:</div>`}
+      <div class="tag-picker-new">
+        <input type="text" class="tag-input" placeholder="New tag, e.g. Session 3" data-new />
+        <button type="button" class="btn primary" data-make>Add</button>
+        <button type="button" class="btn" data-done>Done</button>
+      </div>`;
+    box.querySelectorAll("[data-t]").forEach((c) => c.addEventListener("change", () => {
+      (c.checked ? addTag : removeTag)(e.id, c.dataset.t);
+    }));
+    const input = box.querySelector("[data-new]");
+    const make = () => { if (input.value.trim()) addTag(e.id, input.value); };
+    box.querySelector("[data-make]").addEventListener("click", make);
+    input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") make(); });
+    box.querySelector("[data-done]").addEventListener("click", () => { tagging = null; renderLibrary(); });
+    setTimeout(() => input.focus(), 0);
+    return box;
+  }
+
+  // Add to Heading: tick the headings this belongs under.
+  function headingPicker(e) {
+    const yours = library.tagsOf(e, bundledTags).own;
+    const box = document.createElement("div");
+    box.className = "tag-picker";
+    box.innerHTML = `
+      <div class="tag-picker-list">${headings.map((h) =>
+        `<label><input type="checkbox" data-h="${escapeHtml(h)}" ${yours.includes(h) ? "checked" : ""} /> ${escapeHtml(h)}</label>`).join("")}</div>
+      <div class="tag-picker-new"><button type="button" class="btn" data-done>Done</button></div>`;
+    box.querySelectorAll("[data-h]").forEach((c) => c.addEventListener("change", () => {
+      (c.checked ? addTag : removeTag)(e.id, c.dataset.h);
+    }));
+    box.querySelector("[data-done]").addEventListener("click", () => { placing = null; renderLibrary(); });
+    return box;
+  }
+
+  function groupBlock(g, depth, searching) {
+    const wrap = document.createElement("div");
+    wrap.className = `lib-group depth-${depth}`;
+    const open = searching || openGroups.has(g.key);
+    const head = document.createElement("button");
+    head.type = "button";
+    head.className = `lib-group-head${open ? " open" : ""}`;
+    head.innerHTML = `<span class="caret">${open ? "&#9662;" : "&#9656;"}</span> ${escapeHtml(g.title)} <span class="lib-group-count">${g.entries.length}</span>`;
+    head.addEventListener("click", () => {
+      if (searching) return;
+      if (openGroups.has(g.key)) openGroups.delete(g.key); else openGroups.add(g.key);
+      renderLibrary();
+    });
+    if (g.heading) head.classList.add("is-heading");
+    wrap.appendChild(head);
+    if (open && g.heading) {
+      const tools = document.createElement("div");
+      tools.className = "heading-tools";
+      tools.innerHTML = `<button type="button" class="btn" data-rename>Rename</button><button type="button" class="btn danger" data-drop>Delete heading</button>`;
+      tools.querySelector("[data-rename]").addEventListener("click", () => renameHeading(g.heading));
+      tools.querySelector("[data-drop]").addEventListener("click", () => deleteHeading(g.heading));
+      wrap.appendChild(tools);
+      if (!g.entries.length) {
+        const empty = document.createElement("div");
+        empty.className = "hint heading-empty";
+        empty.textContent = "Nothing here yet. Use Add to Heading on any entry below to put it here.";
+        wrap.appendChild(empty);
+      }
+    }
+    if (open) {
+      if (g.sub) g.sub.forEach((s) => wrap.appendChild(groupBlock(s, depth + 1, searching)));
+      else {
+        // The rows sit in one box with lines between them. Among the
+        // animals, each animal gets its own box under its name: Bobcat,
+        // then its Dire, Giant and Mutated versions.
+        let animal = null;
+        let list = null;
+        g.entries.forEach((e) => {
+          if (!list || (g.byAnimal && animalOf(e) !== animal)) {
+            animal = animalOf(e);
+            if (g.byAnimal) {
+              const label = document.createElement("div");
+              label.className = "animal-label";
+              label.textContent = animal;
+              wrap.appendChild(label);
+            }
+            list = document.createElement("div");
+            list.className = "lib-rows";
+            wrap.appendChild(list);
+          }
+          list.appendChild(entryRow(e));
+        });
+      }
+    }
+    return wrap;
+  }
+
+  function renderLibrary() {
+    const own = library.allTags(bestiary, mine, bundledTags).own.filter((t) => !headings.includes(t));
+    // Only the GM's own tags are filters: the groups already sort by pack
+    // and by where things live.
+    filter.tags = filter.tags.filter((t) => own.includes(t));
+    const tagBar = document.getElementById("libTags");
+    tagBar.innerHTML = own.length ? `<span class="hint">Your tags:</span>` : "";
+    own.forEach((t) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `lib-tag own${filter.tags.includes(t) ? " on" : ""}`;
+      b.textContent = t;
+      b.title = filter.tags.includes(t) ? "Showing only this tag - click to show everything" : "Show only this tag";
+      b.addEventListener("click", () => {
+        filter.tags = filter.tags.includes(t) ? filter.tags.filter((x) => x !== t) : [...filter.tags, t];
+        renderLibrary();
+      });
+      tagBar.appendChild(b);
+    });
+
+    const everything = [...mine.slice().sort((a, b) => a.name.localeCompare(b.name)), ...bestiary];
+    const found = everything.filter((e) => library.matches(e, filter, bundledTags));
+    const searching = !!filter.query.trim() || filter.tags.length > 0;
+    document.getElementById("libCount").textContent = searching
+      ? `${found.length} found`
+      : `${everything.length} in the Catalog${lib && !lib.persistent ? " · this browser won't keep your entries: export them before you close" : ""}`;
+
+    const list = document.getElementById("libList");
+    list.innerHTML = "";
+    const make = document.createElement("div");
+    make.className = "heading-new";
+    make.innerHTML = `<input type="text" class="tag-input" placeholder="New heading, e.g. The Red Hand" data-heading-name />
+      <button type="button" class="btn" data-heading-make>New heading</button>`;
+    const nameBox = make.querySelector("[data-heading-name]");
+    const go = () => newHeading(nameBox.value);
+    make.querySelector("[data-heading-make]").addEventListener("click", go);
+    nameBox.addEventListener("keydown", (ev) => { if (ev.key === "Enter") go(); });
+    list.appendChild(make);
+    const groups = groupsOf(found);
+    if (!groups.length) list.innerHTML = `<div class="list-empty">Nothing matches.</div>`;
+    groups.forEach((g) => list.appendChild(groupBlock(g, 0, searching)));
+  }
+
+  function openEntry(e) {
+    activeId = null;
+    if (e.kind === "creature" || e.id.startsWith("bestiary:")) renderCreature(e.data || e);
+    else renderCharacterSheet(e.data);
+    document.getElementById("detail").style.display = "";
+  }
+
+  // A character's armour, as the character sheet sorts their gear. The
+  // equipment rules load with the tracker; until they have, no armour shows.
+  function armourOf(r) {
+    if (!rulesData || r.state.creature) return [];
+    try {
+      return splitGear(r.state, rulesData).armour.filter((a) => a.health > 0);
+    } catch (err) {
+      return [];
+    }
+  }
+
+  // ---- Rolling for a combatant ----
+  //
+  // A creature rolls from its stat block; a character or NPC made in the
+  // Creator gets the character sheet's own Roll dice window. The GM picks
+  // for every roll whether the room sees it: Public goes to the room log in
+  // the players' Character Sheets, Secret stays here. The switch remembers.
+  const ROLL_CHANNEL = "com.feralucce.twentybelow-dice/rolls";
+  const PUBLIC_KEY = "twentybelow-roster.publicRolls";
+  let publicRolls = true;
+  try { publicRolls = localStorage.getItem(PUBLIC_KEY) !== "false"; } catch (e) {}
+  const sessionRolls = [];
+  let rulesData = null;
+
+  // The Creator's rules, for rolling a character's Skills and Gifts. The
+  // Owlbear and desktop builds ship them baked; the site reads them live.
+  async function loadRules() {
+    if (rulesData) return rulesData;
+    try {
+      const res = await fetch("./rules-data.json", { cache: "no-cache" });
+      if (res.ok) return (rulesData = await res.json());
+    } catch (e) {}
+    const mod = await import("./lib/rules-data.js");
+    return (rulesData = await mod.loadRulesData());
+  }
+
+  async function rolled(name, record) {
+    const entry = { ...record, name, player: "GM", at: Date.now(), secret: !publicRolls };
+    sessionRolls.unshift(entry);
+    sessionRolls.length = Math.min(sessionRolls.length, 30);
+    renderRollLog();
+    if (publicRolls && obrReady) {
+      try {
+        await OBR.broadcast.sendMessage(ROLL_CHANNEL, entry, { destination: "REMOTE" });
+      } catch (err) {
+        console.error("Battle Tracker: broadcast failed", err);
+      }
+    }
+  }
+
+  // ---- The players' Character Sheets ----
+  //
+  // Each sheet names its character in its player's metadata; the list
+  // comes from there. The GM sends a rest or Fate Tokens to one sheet or to
+  // all of them, and each sheet answers with what happened (Tokens stop at
+  // the cap). The GM's Short Rests are not limited to one between nights. An Initiative roll made on a
+  // sheet fills that character's box here, matched by name.
+  const GM_CHANNEL = "com.feralucce.twentybelow-dice/gm";
+  const CHARACTER_KEY = "com.feralucce.twentybelow-dice/character";
+  let partySheets = []; // [{ connectionId, player, character }]
+  const partyNotes = [];
+
+  function partySay(text, ok) {
+    partyNotes.unshift({ text, ok });
+    partyNotes.length = Math.min(partyNotes.length, 4);
+    const box = document.getElementById("partyNote");
+    box.innerHTML = partyNotes.map((n) => `<div class="${n.ok ? "ok" : "bad"}">${escapeHtml(n.text)}</div>`).join("");
+  }
+
+  function readParty(players) {
+    partySheets = players
+      .filter((p) => p.metadata && p.metadata[CHARACTER_KEY] && p.metadata[CHARACTER_KEY].name)
+      .map((p) => ({ connectionId: p.connectionId, player: p.name, character: p.metadata[CHARACTER_KEY].name }));
+    renderParty();
+  }
+
+  function renderParty() {
+    const list = document.getElementById("partyList");
+    const controls = document.getElementById("partyControls");
+    if (!obrReady) {
+      list.textContent = "In Owlbear Rodeo, the players' Character Sheets show here: you can give them rests and Fate Tokens, and their Initiative rolls fill in by themselves.";
+      controls.style.display = "none";
+      return;
+    }
+    if (!partySheets.length) {
+      list.textContent = "No player has a Character Sheet open with a character loaded yet.";
+      controls.style.display = "none";
+      return;
+    }
+    list.innerHTML = partySheets.map((p) => `<strong>${escapeHtml(p.character)}</strong> (${escapeHtml(p.player)})`).join(" &middot; ");
+    const select = document.getElementById("grantTo");
+    const was = select.value;
+    select.innerHTML = `<option value="">Everyone</option>` + partySheets.map((p) =>
+      `<option value="${escapeHtml(p.connectionId)}">${escapeHtml(p.character)}</option>`).join("");
+    if ([...select.options].some((o) => o.value === was)) select.value = was;
+    controls.style.display = "";
+  }
+
+  async function grant(message) {
+    if (!obrReady) return;
+    const to = document.getElementById("grantTo").value || null;
+    try {
+      await OBR.broadcast.sendMessage(GM_CHANNEL, { ...message, to }, { destination: "REMOTE" });
+    } catch (err) {
+      partySay("That didn't reach the room. Try again.", false);
+    }
+  }
+
+  // A player's Initiative, rolled on their sheet, goes in the box of the
+  // character with that name, who is then a PC (so "Roll all non-PC"
+  // leaves it alone).
+  function initiativeFromSheet(roll) {
+    const n = Number(roll.initiative);
+    if (roll.kind !== "Initiative" || !Number.isFinite(n)) return;
+    const key = String(roll.name || "").trim().toLowerCase();
+    const r = combatants().find((x) => !x.state.creature && (x.state.name || "").trim().toLowerCase() === key);
+    if (!r) {
+      partySay(`${roll.name} rolled Initiative ${n}, but nobody by that name is in this encounter.`, false);
+      return;
+    }
+    act(() => {
+      engine.entryFor(combat, r).role = "PC";
+      engine.setInitiative(combat, r, n);
+    });
+    partySay(`${roll.name} rolled Initiative ${n}; it's in their box.`, true);
+  }
+
+  function listenToSheets() {
+    OBR.party.getPlayers().then(readParty).catch(() => {});
+    OBR.party.onChange(readParty);
+    OBR.broadcast.onMessage(ROLL_CHANNEL, (event) => {
+      const roll = event.data || {};
+      sessionRolls.unshift(roll);
+      sessionRolls.length = Math.min(sessionRolls.length, 30);
+      renderRollLog();
+      initiativeFromSheet(roll);
+    });
+    OBR.broadcast.onMessage(GM_CHANNEL, (event) => {
+      const msg = event.data || {};
+      if (msg.type === "result") partySay(msg.text, msg.ok !== false);
+    });
+    renderParty();
+  }
+
+  document.getElementById("grantShort").addEventListener("click", () => grant({ type: "rest", full: false }));
+  document.getElementById("grantFull").addEventListener("click", () => grant({ type: "rest", full: true }));
+  document.getElementById("grantFate").addEventListener("click", () => grant({ type: "fate", amount: 1 }));
+
+  function renderRollLog() {
+    const box = document.getElementById("rollLog");
+    if (!box) return;
+    box.innerHTML = sessionRolls.length ? "" : `<div class="hint">No rolls yet this session.</div>`;
+    sessionRolls.slice(0, 10).forEach((r) => {
+      const row = document.createElement("div");
+      row.className = `log-row ${r.success ? "ok" : "bad"}`;
+      row.innerHTML = `<div><strong>${escapeHtml(r.name)}</strong> &middot; ${escapeHtml(r.kind)} - <span class="log-head">${escapeHtml(r.headline)}</span>${
+        r.secret ? ` <span class="secret-mark">secret</span>` : ""}</div>${r.detail ? `<div class="hint">${escapeHtml(r.detail)}</div>` : ""}`;
+      box.appendChild(row);
+    });
+  }
+
+  function publicSwitch() {
+    const wrap = document.createElement("div");
+    wrap.className = "public-switch";
+    const draw = () => {
+      wrap.innerHTML = `<span class="hint">Who sees these rolls:</span>
+        <button type="button" class="btn${publicRolls ? " on" : ""}" data-p="1">Public</button>
+        <button type="button" class="btn${publicRolls ? "" : " on"}" data-p="0">Secret</button>
+        <span class="hint">${publicRolls
+          ? (obrReady ? "The room sees them in their Character Sheets." : "Public once you're in an Owlbear room; here, only you see them.")
+          : "Only you see them."}</span>`;
+      wrap.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => {
+        publicRolls = b.dataset.p === "1";
+        try { localStorage.setItem(PUBLIC_KEY, String(publicRolls)); } catch (e) {}
+        draw();
+      }));
+    };
+    draw();
+    return wrap;
+  }
+
+  async function openRoller(r) {
+    if (!r.state) return;
+    const name = r.state.name || "Unnamed";
+    const view = document.getElementById("charView");
+    view.innerHTML = "";
+    const shell = document.createElement("div");
+    shell.className = "roller-shell";
+    shell.appendChild(publicSwitch());
+    let parts;
+    if (r.state.creature) {
+      parts = creatureRollPanel(r.state.creature, name, { onRolled: (rec) => rolled(name, rec) });
+      // A creature's rolls carry its Exhausted too; the GM reads the row.
+      const exh = engine.exhaustedOf(combat, r);
+      if (exh) {
+        const note = document.createElement("p");
+        note.className = "roller-tier-note roller-exhausted";
+        note.textContent = `Exhausted ${exh}: ${engine.EXHAUSTED_EFFECTS.slice(1, exh + 1).join("; ")}. `
+          + (exh >= 2 ? "Read the Disadvantage row." : "Read the Disadvantage row for a Physical attack.");
+        parts.splice(1, 0, note);
+      }
+    } else {
+      let data;
+      try {
+        data = await loadRules();
+      } catch (err) {
+        view.innerHTML = `<p class="hint">The rules couldn't be loaded, so ${escapeHtml(name)} can't roll here (${escapeHtml(err.message)}).</p>`;
+        document.getElementById("detail").style.display = "";
+        return;
+      }
+      // Ki is tracked on the fight, not the file: the Gift Check reads it
+      // from there and a failed one takes it back off there.
+      const e = combatEntry(r);
+      r.state.currentKi = e.currentKi;
+      r.state.exhausted = engine.exhaustedOf(combat, r);
+      parts = rollDicePanel(r.state, data, {
+        onKi: () => { e.currentKi = r.state.currentKi; saveCombat(); renderList(); },
+        onRolled: (rec) => {
+          rolled(name, rec);
+          if (rec.kind === "Initiative" && Number.isFinite(rec.initiative)) setInitiative(r, rec.initiative);
+        },
+        initiativeSent: "It goes in their Initiative box.",
+      });
+      parts[0].textContent = `${name}: roll dice`;
+    }
+    parts.forEach((n) => shell.appendChild(n));
+    const log = document.createElement("div");
+    log.className = "char-section";
+    log.innerHTML = `<div class="char-section-title">Rolls this session</div><div id="rollLog"></div>`;
+    shell.appendChild(log);
+    view.appendChild(shell);
+    renderRollLog();
+    document.getElementById("detail").style.display = "";
+  }
+
+  // ---- Saved encounters ----
+  //
+  // A premade fight: everyone in it and their roles. Saving keeps who is
+  // in the encounter, not how the fight is going - loading one gives fresh
+  // combatants at full Health. Adding a saved one puts its combatants
+  // beside whoever is already here, so the PCs stay loaded.
+  async function saveEncounter() {
+    const members = roster.filter((r) => r.state);
+    if (!members.length) { libNote(""); encNote("Add someone to the encounter first."); return; }
+    const name = (prompt("Name this encounter:", `Encounter ${encounters.length + 1}`) || "").trim();
+    if (!name) return;
+    const saved = {
+      id: `enc:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      saved: Date.now(),
+      members: members.map((r) => ({ text: r.text, icon: r.icon || null, role: combatEntry(r).role })),
+    };
+    encounters = [...encounters, saved];
+    await lib.setMeta("encounters", encounters);
+    encNote(`Saved ${name}.`);
+    renderEncounters();
+  }
+
+  function loadEncounter(id) {
+    const saved = encounters.find((x) => x.id === id);
+    if (!saved) return;
+    const taken = roster.filter((r) => r.state).map((r) => r.state.name || "");
+    saved.members.forEach((m) => {
+      let state;
+      try { state = JSON.parse(m.text); } catch (e) { return; }
+      const name = library.uniqueName(state.baseName || state.name || "Unnamed", taken);
+      taken.push(name);
+      const rid = `c${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
+      const r = parseEntry(rid, JSON.stringify({ ...state, name }), m.icon);
+      roster.push(r);
+      if (r.state && m.role) combatEntry(r).role = m.role;
+    });
+    saveRoster();
+    saveCombat();
+    renderAll();
+    encNote(`${saved.name}: ${saved.members.length} added.`);
+  }
+
+  async function deleteEncounter(id) {
+    const saved = encounters.find((x) => x.id === id);
+    if (!saved || !confirm(`Delete the saved encounter ${saved.name}?`)) return;
+    encounters = encounters.filter((x) => x.id !== id);
+    await lib.setMeta("encounters", encounters);
+    renderEncounters();
+  }
+
+  function clearEncounter() {
+    if (!roster.length || !confirm("Take everyone out of this encounter? Your Catalog and saved encounters stay.")) return;
+    roster = [];
+    combat = engine.createCombat();
+    saveRoster();
+    saveCombat();
+    renderAll();
+  }
+
+  function encNote(text) {
+    const note = document.getElementById("obrNote");
+    note.style.display = text ? "" : "none";
+    note.textContent = text;
+  }
+
+  function renderEncounters() {
+    const list = document.getElementById("encList");
+    list.innerHTML = encounters.length ? "" : `<div class="hint" style="margin-top:0.3rem">None yet. Build a fight here, then Save this encounter.</div>`;
+    encounters.forEach((x) => {
+      const who = x.members.map((m) => { try { return JSON.parse(m.text).name; } catch (e) { return "?"; } });
+      const row = document.createElement("div");
+      row.className = "enc-row";
+      row.innerHTML = `
+        <span class="enc-row-name">${escapeHtml(x.name)}<span class="enc-row-who">${escapeHtml(who.join(", "))}</span></span>
+        <button type="button" class="btn primary" data-load>Add to encounter</button>
+        <button type="button" class="btn danger" data-del>Delete</button>`;
+      row.querySelector("[data-load]").addEventListener("click", () => loadEncounter(x.id));
+      row.querySelector("[data-del]").addEventListener("click", () => deleteEncounter(x.id));
+      list.appendChild(row);
+    });
+  }
+
+  function updateEncCount() {
+    const n = roster.filter((r) => r.state).length;
+    document.getElementById("encCount").textContent = n ? `(${n})` : "";
+  }
+
+  function showView(which) {
+    document.getElementById("libraryView").style.display = which === "library" ? "" : "none";
+    document.getElementById("encounterView").style.display = which === "encounter" ? "" : "none";
+    document.getElementById("viewLibrary").classList.toggle("on", which === "library");
+    document.getElementById("viewEncounter").classList.toggle("on", which === "encounter");
+    document.getElementById("detail").style.display = "none";
+    activeId = null;
+    try { localStorage.setItem("twentybelow-roster.view", which); } catch (e) {}
+    if (which === "encounter") renderList();
+  }
+
+  async function startLibrary() {
+    lib = await library.openLibrary();
+    mine = await lib.all();
+    bundledTags = await lib.getMeta("bundledTags", {});
+    headings = await lib.getMeta("headings", []);
+    encounters = await lib.getMeta("encounters", []);
+    renderEncounters();
+    // A tracker that already had characters loaded, from before there was
+    // a library: they are the GM's, so they go in the catalogue once.
+    if (!(await lib.getMeta("rosterMigrated", false))) {
+      for (const r of roster.filter((x) => x.state && !x.state.creature)) {
+        const e = library.mineEntry(r.state, { icon: r.icon });
+        await lib.put(e);
+        mine.push(e);
+      }
+      await lib.setMeta("rosterMigrated", true);
+    }
+    renderLibrary();
+    try {
+      bestiary = await loadBestiary();
+    } catch (err) {
+      libNote(`The bestiary couldn't be loaded (${err.message}). Your own entries still work.`);
+    }
+    renderLibrary();
   }
 
   function renderAll() {
     renderCombatBar();
     renderList();
+    updateEncCount();
   }
 
   function renderCombatBar() {
@@ -858,29 +2208,33 @@
     const declaring = combat.started && combat.turnIndex < 0;
 
     const initCell = e.role === "PC"
-      ? `<span class="mini-label">Init</span><input class="init-box" type="number" data-init="${r.id}" value="${e.initiative ?? ""}" />`
-      : `<span class="mini-label">Init</span><input class="init-box" type="number" data-init="${r.id}" value="${e.initiative ?? ""}" />
+      ? `<span class="mini-label">Init</span><input class="init-box" type="number" min="0" step="1" data-init="${r.id}" value="${e.initiative ?? ""}" />`
+      : `<span class="mini-label">Init</span><input class="init-box" type="number" min="0" step="1" data-init="${r.id}" value="${e.initiative ?? ""}" />
          <button class="btn" data-roll="${r.id}" title="Roll 1d10 + Initiative">Roll</button>`;
 
+    // A creature in the book has no Ki pool, so no Ki and no bump.
+    const creature = !!r.state.creature;
     const brackets = declaring
       ? BRACKETS.map((b) => `<button class="btn${e.bracket === b ? " on" : ""}" data-bracket="${r.id}" data-b="${b}">${b}</button>`).join("")
-        + `<button class="btn" data-bump="${r.id}" title="Spend 1 Ki to move up a bracket" ${
-            !e.bracket || e.currentKi <= 0 || e.bracket === "Fast" ? "disabled" : ""}>Bump (1 Ki)</button>`
+        + (creature ? "" : `<button class="btn" data-bump="${r.id}" title="Spend 1 Ki to move up a bracket" ${
+            !e.bracket || e.currentKi <= 0 || e.bracket === "Fast" ? "disabled" : ""}>Bump (1 Ki)</button>`)
       : "";
 
     const tracks = combat.started
       ? [["Health", e.currentHealth, f["Health Levels"]],
          ["Poise", e.currentPoise, f.Poise],
          ["Sanity", e.currentSanity, f.Sanity],
-         ["Ki", e.currentKi, f.Ki]].map(([name, cur, max]) => {
+         ...(creature ? [] : [["Ki", e.currentKi, f.Ki]])].map(([name, cur, max]) => {
           const status = trackStatus(name, cur, r);
           const cls = cur <= 0 ? "down" : cur < max ? "hurt" : "";
           return `<div class="track ${cls}">
-              <span class="tk">${name === "Health" ? "HP" : name.slice(0, 3)}</span>
-              <button data-adj="${r.id}" data-t="${name}" data-d="-1">&minus;</button>
-              <span class="tv">${cur}/${max}</span>
-              <button data-adj="${r.id}" data-t="${name}" data-d="1">+</button>
-            </div>${status ? `<span class="status-chip">${status}</span>` : ""}`;
+              <span class="tk">${name}${status ? ` <span class="tstat">${status}</span>` : ""}</span>
+              <span class="tctl">
+                <button data-adj="${r.id}" data-t="${name}" data-d="-1" title="${name} down one">&minus;</button>
+                <span class="tv">${cur}/${max}</span>
+                <button data-adj="${r.id}" data-t="${name}" data-d="1" title="${name} up one">+</button>
+              </span>
+            </div>`;
         }).join("")
       : "";
 
@@ -891,10 +2245,47 @@
           + `<button class="btn token-btn" data-link="${r.id}" title="Select a token already on the scene, then click">Link</button>`
       : "";
 
+    // Exhausted stacks 1-5 and each level adds to the last (rules.md).
+    const exh = engine.exhaustedOf(combat, r);
+    const exhausted = combat.started
+      ? `<div class="track${exh ? " down" : ""}" title="Exhausted">
+          <span class="tk">Exhausted</span>
+          <span class="tctl">
+            <button data-exh="${r.id}" data-d="-1">&minus;</button>
+            <span class="tv">${exh}/5</span>
+            <button data-exh="${r.id}" data-d="1">+</button>
+          </span>
+        </div>`
+      : "";
+    const exhNote = combat.started && exh
+      ? `<div class="exh-note">Exhausted ${exh}: ${engine.EXHAUSTED_EFFECTS.slice(1, exh + 1).join("; ")}</div>`
+      : "";
+
+    // A character's armour, each piece losing a Health Level at most once
+    // an attack and broken at 0. A creature's Soak is its armour already.
+    const armour = combat.started && !creature ? armourOf(r) : [];
+    const armourHtml = armour.length
+      ? `<div class="track-grid armour-grid">${armour.map((a) => {
+          const left = engine.armourLeft(combat, r, a.key, a.health);
+          return `<div class="track armour-piece${left === 0 ? " down" : left < a.health ? " hurt" : ""}">
+            <span class="tk armour-name" title="${escapeHtml(a.name)}">${escapeHtml(a.name)} <span class="armour-hard">Hardness ${escapeHtml(a.hardness)}</span></span>
+            <span class="tctl">
+              <button data-dent="${r.id}" data-key="${escapeHtml(a.key)}" data-hl="${a.health}" data-d="1" title="Take one Health Level">&minus;</button>
+              <span class="tv">${left === 0 ? "broken" : `${left}/${a.health} HL`}</span>
+              <button data-dent="${r.id}" data-key="${escapeHtml(a.key)}" data-hl="${a.health}" data-d="-1" title="Repair one Health Level">+</button>
+            </span>
+          </div>`;
+        }).join("")}</div>`
+      : "";
+
     const floorNote = combat.started && e.floorNote
       ? `<span class="floor-note">${e.floorNote}</span>`
       : "";
-    return `<div class="ri-combat">${initCell}${brackets}${tracks}${floorNote}${token}</div>`;
+    return `<div class="ri-combat">
+        <div class="ri-line">${initCell}${brackets}${floorNote}${token}</div>
+        ${combat.started ? `<div class="track-grid">${tracks}${exhausted}</div>` : ""}
+        ${armourHtml}${exhNote}
+      </div>`;
   }
 
   // The list stays in the order characters were added right through setup
@@ -936,7 +2327,8 @@
       const div = document.createElement("div");
       const onTurn = combat.started && currentTurnId() === entry.id;
       const acted = hasActed(entry.id);
-      div.className = `roster-item${entry.id === activeId ? " active" : ""}${onTurn ? " on-turn" : ""}${acted ? " acted" : ""}`;
+      const down = entry.state && combat.started && engine.isDown(combat, entry);
+      div.className = `roster-item${entry.id === activeId ? " active" : ""}${onTurn ? " on-turn" : ""}${acted ? " acted" : ""}${down ? " is-down" : ""}`;
       if (entry.state) {
         const natureLabel = entry.state.nature && entry.state.nature.custom
           ? entry.state.nature.custom.label
@@ -952,6 +2344,8 @@
               </div>
             </div>
             <div class="ri-meta">
+              <button class="btn primary" data-rolls="${entry.id}" title="Roll for ${escapeHtml(entry.state.name || "this one")}">Roll dice</button>
+              <button class="btn" data-view="${entry.id}" title="See everything on ${escapeHtml(entry.state.name || "this one")}">View</button>
               <button class="role-chip role-${ce.role}" data-role="${entry.id}" title="Click to change role">${ce.role}</button>
               <button class="ri-remove" data-id="${entry.id}">Remove</button>
             </div>
@@ -959,12 +2353,20 @@
           ${combatRowHtml(entry)}
         `;
         div.addEventListener("click", (e) => {
-          if (e.target.closest(".ri-remove") || e.target.closest(".ri-combat") || e.target.closest(".role-chip")) return;
+          if (e.target.closest(".ri-remove") || e.target.closest(".ri-combat") || e.target.closest(".role-chip") || e.target.closest("[data-view]") || e.target.closest("[data-rolls]")) return;
           selectCharacter(entry.id);
         });
         div.querySelector("[data-role]").addEventListener("click", (ev) => {
           ev.stopPropagation();
           cycleRole(entry);
+        });
+        div.querySelector("[data-view]").addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          selectCharacter(entry.id);
+        });
+        div.querySelector("[data-rolls]").addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          openRoller(entry);
         });
         const initEl = div.querySelector("[data-init]");
         if (initEl) {
@@ -986,6 +2388,18 @@
           b.addEventListener("click", (ev) => {
             ev.stopPropagation();
             adjustTrack(entry, b.dataset.t, Number(b.dataset.d));
+          });
+        });
+        div.querySelectorAll("[data-exh]").forEach((b) => {
+          b.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            act(() => engine.adjustExhausted(combat, entry, Number(b.dataset.d)), renderList);
+          });
+        });
+        div.querySelectorAll("[data-dent]").forEach((b) => {
+          b.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            act(() => engine.dentArmour(combat, entry, b.dataset.key, Number(b.dataset.hl), Number(b.dataset.d)), renderList);
           });
         });
         const dropEl = div.querySelector("[data-drop]");
@@ -1059,11 +2473,35 @@
     await addFiles(await filesFromDataTransfer(e.dataTransfer));
   });
 
-  document.getElementById("backBtn").addEventListener("click", () => {
+  function closeDetail() {
     activeId = null;
     document.getElementById("detail").style.display = "none";
     renderList();
+  }
+  document.getElementById("backBtn").addEventListener("click", closeDetail);
+  document.getElementById("detail").addEventListener("click", (e) => {
+    if (e.target.id === "detail") closeDetail();
   });
+
+  document.getElementById("viewLibrary").addEventListener("click", () => showView("library"));
+  document.getElementById("viewEncounter").addEventListener("click", () => showView("encounter"));
+  document.getElementById("libSearch").addEventListener("input", (e) => {
+    filter.query = e.target.value;
+    renderLibrary();
+  });
+  document.getElementById("libSource").addEventListener("change", (e) => {
+    filter.source = e.target.value;
+    renderLibrary();
+  });
+  ["libFiles", "libFolder"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", async (e) => {
+      await importFiles(e.target.files);
+      e.target.value = "";
+    });
+  });
+  document.getElementById("libExport").addEventListener("click", exportCatalogue);
+  document.getElementById("encSave").addEventListener("click", saveEncounter);
+  document.getElementById("encClear").addEventListener("click", clearEncounter);
 
   // Load persisted roster
   try {
@@ -1091,7 +2529,13 @@
   } catch (e) {}
 
   renderAll();
+  let startView = "library";
+  try { startView = localStorage.getItem("twentybelow-roster.view") || "library"; } catch (e) {}
+  showView(startView === "encounter" ? "encounter" : "library");
+  startLibrary();
   initOBR();
+  // The equipment rules, for armour on the lines; the rollers use the same.
+  loadRules().then(() => renderList()).catch(() => {});
 </script>
 </body>
 </html>
