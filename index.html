@@ -552,7 +552,7 @@
 <script src="./lib/marked.min.js"></script>
 
 <h1><img src="https://feralucce.github.io/20_Below_Roster/icon.svg" alt="" width="20" height="20" /> 20 Below Battle Tracker</h1>
-<p class="site-back"><a href="https://20belowrpg.com/home.html" target="_blank" rel="noopener">&larr; 20 Below</a></p>
+<p class="site-back"><a href="https://20belowrpg.com/home.html" target="_blank" rel="noopener">&larr; 20 Below</a> <span id="bugReportSlot"></span></p>
 
 <nav class="views">
   <button type="button" class="view-btn on" id="viewLibrary">Catalog</button>
@@ -646,6 +646,7 @@
 <script type="importmap">
 {
  "imports": {
+  "./lib/bug-report.js": "./lib/bug-report.js?v=c866c40552",
   "./lib/combat/encounter.js": "./lib/combat/encounter.js?v=0ab8668b78",
   "./lib/combat/library.js": "./lib/combat/library.js?v=104fee9130",
   "./lib/combat/model.js": "./lib/combat/model.js?v=f2fb558219",
@@ -654,7 +655,7 @@
   "./lib/export/toJson.js": "./lib/export/toJson.js?v=b75d7e429d",
   "./lib/file-actions.js": "./lib/file-actions.js?v=f1c5124c38",
   "./lib/file.js": "./lib/file.js?v=96a7618ac6",
-  "./lib/main.js": "./lib/main.js?v=fdf9b905a7",
+  "./lib/main.js": "./lib/main.js?v=2ff8fffa69",
   "./lib/media.js": "./lib/media.js?v=fb060e595c",
   "./lib/parse/attributes.js": "./lib/parse/attributes.js?v=fee50b0e63",
   "./lib/parse/boons.js": "./lib/parse/boons.js?v=af6554631f",
@@ -731,8 +732,13 @@
   import * as library from "./lib/combat/library.js";
   import { creatureRollPanel, rollDicePanel, giftInfoPanel } from "./lib/sheet/panels.js";
   import { splitGear, sheetContext, named, SKILL_ELEMENT_COLOURS } from "./lib/sheet/sheet-model.js";
+  import { addBugReportButton } from "./lib/bug-report.js";
   import { skillTierName, boonNotes, flawNotes, giftNotes, adderLabels, optionWithChoice, portraitOf, convertSkillLadder, SKILL_LADDER } from "./lib/state.js";
   const { ROLES, BRACKETS, computeFiguredCharacteristics } = engine;
+  // In Owlbear the tracker is served from the extension's github.io address.
+  addBugReportButton(document.getElementById("bugReportSlot"), {
+    app: location.host === "feralucce.github.io" ? "Owlbear Battle Tracker" : "Battle Tracker",
+  });
 
   // ---- Owlbear bridge ----
   //

@@ -19,4 +19,5 @@ and re-run the sync; anything changed here is overwritten.
 | `steps/roller-panel.js` | `app/steps/roller-panel.js` |
 | `sheet/panels.js` | `app/sheet/panels.js` |
 | `sheet/sheet-model.js` | `app/sheet/sheet-model.js` |
+| `bug-report.js` | `app/bug-report.js` |
 | `../index.html` | `tracker/index.html` |
