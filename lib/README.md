@@ -20,4 +20,5 @@ and re-run the sync; anything changed here is overwritten.
 | `sheet/panels.js` | `app/sheet/panels.js` |
 | `sheet/sheet-model.js` | `app/sheet/sheet-model.js` |
 | `bug-report.js` | `app/bug-report.js` |
+| `update-gate.js` | `app/update-gate.js` |
 | `../index.html` | `tracker/index.html` |
