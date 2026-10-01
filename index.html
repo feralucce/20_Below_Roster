@@ -684,15 +684,15 @@
   "./lib/roller/core.js": "./lib/roller/core.js?v=83f87fd090",
   "./lib/roller/damage.js": "./lib/roller/damage.js?v=5ad5b6f00b",
   "./lib/roller/giftCheck.js": "./lib/roller/giftCheck.js?v=e8d50c3533",
-  "./lib/roller/resourceCheck.js": "./lib/roller/resourceCheck.js?v=d03860c0ac",
+  "./lib/roller/resourceCheck.js": "./lib/roller/resourceCheck.js?v=9ee4ed8dc3",
   "./lib/roller/wealthCheck.js": "./lib/roller/wealthCheck.js?v=c5927521a6",
   "./lib/rules-data.js": "./lib/rules-data.js?v=b7cc5907a7",
   "./lib/sheet/paged-sheet.js": "./lib/sheet/paged-sheet.js?v=11117fe5ca",
   "./lib/sheet/panels.js": "./lib/sheet/panels.js?v=bd3748612e",
   "./lib/sheet/sheet-model.js": "./lib/sheet/sheet-model.js?v=434381439f",
   "./lib/sheet/web-sheet.js": "./lib/sheet/web-sheet.js?v=a9efa36156",
-  "./lib/signup.js": "./lib/signup.js?v=63feb9cd9d",
-  "./lib/state.js": "./lib/state.js?v=7055175d32",
+  "./lib/signup.js": "./lib/signup.js?v=9c6a29a3c8",
+  "./lib/state.js": "./lib/state.js?v=b974a9a678",
   "./lib/steps/00-bonus.js": "./lib/steps/00-bonus.js?v=557febbc41",
   "./lib/steps/01-identity.js": "./lib/steps/01-identity.js?v=21ddf03a4a",
   "./lib/steps/02-nature.js": "./lib/steps/02-nature.js?v=d123a87609",
@@ -713,7 +713,7 @@
   "./lib/steps/everyman-gear.js": "./lib/steps/everyman-gear.js?v=1dc0eae918",
   "./lib/steps/gear-shop.js": "./lib/steps/gear-shop.js?v=c45c2a4515",
   "./lib/steps/portrait-field.js": "./lib/steps/portrait-field.js?v=15012a2659",
-  "./lib/steps/roller-panel.js": "./lib/steps/roller-panel.js?v=3dc49c58b9",
+  "./lib/steps/roller-panel.js": "./lib/steps/roller-panel.js?v=988022aa50",
   "./lib/steps/tab-advancement.js": "./lib/steps/tab-advancement.js?v=8897edb01d",
   "./lib/steps/tab-scars.js": "./lib/steps/tab-scars.js?v=bacc606209",
   "./lib/sw.js": "./lib/sw.js?v=67556fbe92",
@@ -905,8 +905,11 @@
       : `<div class="item-line">None.</div>`;
 
     const scars = state.scars || [];
+    // The Creator's keys, one per Vital: 'battle' is Health and 'poise' is
+    // Social. A scar saved before `kind` existed only says physical or not.
+    const scarLabel = { battle: "Physical", poise: "Social", mental: "Mental" };
     const scarsHtml = scars.length
-      ? scars.map((s) => `<div class="item-line"><span class="in">${escapeHtml(s.title)}</span> (${s.physical ? "Physical" : "Mental"})</div>`).join("")
+      ? scars.map((s) => `<div class="item-line"><span class="in">${escapeHtml(s.title)}</span> (${scarLabel[s.kind ?? (s.physical ? "battle" : "mental")] || "Scar"})</div>`).join("")
       : "";
 
     const fateLine = state.currentFateTokens != null ? `<div class="item-line">Fate Tokens: <span class="in">${state.currentFateTokens}</span></div>` : "";
